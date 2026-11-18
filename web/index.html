@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' ws: wss: https://api.openai.com; media-src 'self' blob: mediastream:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1b1410" />
+<link rel="manifest" href="/manifest.json" />
+<title>Mochi</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="mood-idle">
+  <div id="app">
+    <div id="bubble" class="bubble"><span id="bubble-text">hi! click me to talk 🐾</span></div>
+    <div id="chip" class="chip"></div>
+
+    <div id="cat-wrap" title="click: talk / mute · right-click: menu · drag: move">
+      <!-- floating mood decorations -->
+      <div class="fx zzz"><span>z</span><span>z</span><span>Z</span></div>
+      <div class="fx qmark">?</div>
+      <div class="fx bang">!</div>
+      <div class="fx dots"><span></span><span></span><span></span></div>
+      <div class="fx hearts"><span>♥</span><span>♥</span><span>♥</span></div>
+      <div class="fx waves"><i></i><i></i><i></i></div>
+
+      <div id="cat" class="sprite" role="img" aria-label="Maodie the cat"></div>
+      <div id="mic-dot" title="mic"></div>
+    </div>
+
+    <div id="panel" class="panel hidden">
+      <div class="panel-head">
+        <b id="proj">—</b><span id="sess"></span>
+        <button id="close-panel">✕</button>
+      </div>
+      <div id="feed" class="feed"></div>
+      <div id="diff" class="diff"></div>
+      <form id="typebox"><input id="typein" placeholder="type to Mochi…" autocomplete="off" /></form>
+    </div>
+
+    <div id="remote-controls" class="remote-only">
+      <button id="btn-talk">🎙 Talk</button>
+      <button id="btn-panel">📜 Activity</button>
+      <button id="btn-stop">✋ Stop task</button>
+    </div>
+  </div>
+  <script src="/voice-config.js"></script>
+  <script src="/voice.js"></script>
+  <script src="/voice-gemini.js"></script>
+  <script src="/sprite.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
