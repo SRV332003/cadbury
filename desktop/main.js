@@ -5,7 +5,7 @@ const path = require("node:path");
 const http = require("node:http");
 
 // GNOME/Wayland ignores always-on-top for native Wayland windows → run under XWayland.
-app.commandLine.appendSwitch("ozone-platform", "x11");
+if (process.platform === "linux") app.commandLine.appendSwitch("ozone-platform", "x11");
 app.commandLine.appendSwitch("enable-transparent-visuals");
 // Hide Chromium's harmless GTK/X11 startup noise; set MOCHI_DEBUG=1 to see it again.
 if (!process.env.MOCHI_DEBUG) app.commandLine.appendSwitch("log-level", "3");
@@ -70,7 +70,7 @@ function createWindow() {
   win.webContents.on("console-message", (e) => {
     if (e.level === "error" || e.level === "warning") console.log(`[cat page] ${e.message} (${e.sourceId}:${e.lineNumber})`);
   });
-  win.webContents.once("did-finish-load", () => setTimeout(async () => {
+  if (process.env.MOCHI_DEBUG) win.webContents.once("did-finish-load", () => setTimeout(async () => {
     try {
       const dir = path.join(process.env.XDG_CACHE_HOME || path.join(require("node:os").homedir(), ".cache"), "mochi");
       require("node:fs").writeFileSync(path.join(dir, "cat-shot.png"), (await win.webContents.capturePage()).toPNG());
@@ -105,11 +105,28 @@ function setScale(s) {
   applySize();
 }
 
-function openTui(dir) {
-  const cmd = ["opencode", "attach", `http://127.0.0.1:${OC_PORT}`, "--dir", dir, "--continue"];
-  const term = process.env.MOCHI_TERMINAL || "kgx";
-  const args = term === "gnome-terminal" ? ["--", ...cmd] : term === "foot" ? cmd : ["--", ...cmd];
+// Open a command in a new terminal window (MOCHI_TERMINAL overrides auto-detection).
+function openInTerminal(dir, cmd) {
+  if (process.platform === "darwin") {
+    const line = `cd ${JSON.stringify(dir)} && ${cmd.map((c) => JSON.stringify(c)).join(" ")}`;
+    spawn("osascript", ["-e", `tell application "Terminal" to do script ${JSON.stringify(line)}`], { detached: true, stdio: "ignore" }).unref();
+    return;
+  }
+  const { execFileSync } = require("node:child_process");
+  const has = (t) => { try { execFileSync("sh", ["-c", `command -v ${t}`], { stdio: "ignore" }); return true; } catch { return false; } };
+  const candidates = [process.env.MOCHI_TERMINAL, "x-terminal-emulator", "gnome-terminal", "kgx", "ptyxis", "konsole",
+    "xfce4-terminal", "alacritty", "kitty", "wezterm", "foot", "xterm"].filter(Boolean);
+  const term = candidates.find(has);
+  if (!term) return console.warn("[mochi] no terminal emulator found; set MOCHI_TERMINAL");
+  const args = ["foot", "alacritty"].includes(term) ? (term === "alacritty" ? ["-e", ...cmd] : cmd)
+    : ["kitty"].includes(term) ? cmd
+    : ["wezterm"].includes(term) ? ["start", "--", ...cmd]
+    : ["xterm", "konsole", "xfce4-terminal", "x-terminal-emulator"].includes(term) ? ["-e", ...cmd]
+    : ["--", ...cmd];
   spawn(term, args, { cwd: dir, detached: true, stdio: "ignore" }).unref();
+}
+function openTui(dir) {
+  openInTerminal(dir, ["opencode", "attach", `http://127.0.0.1:${OC_PORT}`, "--dir", dir, "--continue"]);
 }
 
 async function getState() {
@@ -141,7 +158,7 @@ app.whenReady().then(async () => {
       { label: info.voice === "off" ? "🎙  Start talking" : info.voice === "muted" ? "🎙  Unmute" : "🔇  Mute", click: () => send("talk") },
       ...(info.voice !== "off" ? [{ label: "📴  Hang up voice", click: () => send("hangup") }] : []),
       { type: "separator" },
-      { label: "🖥  Open opencode TUI here", click: () => openTui(st.directory || ROOT) },
+      ...(st.harness === "opencode" ? [{ label: "🖥  Open opencode TUI here", click: () => openTui(st.directory || ROOT) }] : []),
       { label: "📜  Activity / diff panel", click: () => send("panel") },
       { label: "🔍  Show changes", click: () => send("diff") },
       { label: "✋  Stop task", click: () => send("stop") },

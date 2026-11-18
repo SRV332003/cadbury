@@ -286,8 +286,8 @@ setInterval(() => {
   if (!state.busy && state.mood === "idle" && Date.now() - state.lastActivityAt > 5 * 60_000) setMood("sleeping", "zzz…");
 }, 15_000);
 
-// Default: Hinglish. A saved choice wins ("auto" is saved as null = match the user).
+// Default: MOCHI_LANGUAGE, else match the user. A saved voice choice wins ("auto" is saved as null).
 {
   const prefs = loadPrefs();
-  state.language = "language" in prefs ? prefs.language || undefined : process.env.MOCHI_LANGUAGE || "Hinglish";
+  state.language = "language" in prefs ? prefs.language || undefined : process.env.MOCHI_LANGUAGE || undefined;
 }

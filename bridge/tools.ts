@@ -5,7 +5,11 @@ import { homedir } from "node:os";
 import { oc } from "./opencode";
 import { state, setContext, setMood, emit, savePref, type DiffFile } from "./state";
 
-const ROOTS = (process.env.PROJECT_ROOTS ?? `${homedir()}/Storage/projects,${homedir()}/Storage/Projects,${homedir()}/Storage`)
+// Folders whose subfolders count as "projects" for voice switching (opencode mode).
+const DEFAULT_ROOTS = ["projects", "Projects", "code", "Code", "src", "dev", "work", "repos", "git", "Developer"]
+  .map((d) => `${homedir()}/${d}`)
+  .join(",");
+const ROOTS = (process.env.PROJECT_ROOTS ?? DEFAULT_ROOTS)
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 function listProjectDirs(): { name: string; path: string }[] {

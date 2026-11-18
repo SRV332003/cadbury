@@ -1,12 +1,18 @@
 {
-  "name": "mochi-voicecode",
-  "version": "0.1.0",
+  "name": "mochi",
+  "version": "0.2.0",
   "private": true,
-  "description": "Mochi: a voice ginger-cat companion on top of opencode",
+  "description": "A floating voice pet for Claude Code and opencode: talk to your coding agent, hear what it did.",
+  "license": "MIT",
   "main": "desktop/main.js",
   "scripts": {
+    "start": "./bin/mochi",
     "bridge": "bun bridge/index.ts",
     "desktop": "electron desktop/main.js",
-    "start": "./bin/mochi"
-  }
+    "check": "bun build bridge/index.ts --target=bun --outdir=/tmp/mochi-check >/dev/null && node --check desktop/main.js && node --check web/app.js && node --check web/voice.js && node --check web/voice-gemini.js && node --check web/sprite.js && echo ok"
+  },
+  "devDependencies": {
+    "electron": "^44.9.3"
+  },
+  "trustedDependencies": ["electron"]
 }

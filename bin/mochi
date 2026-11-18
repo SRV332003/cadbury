@@ -5,7 +5,10 @@
 #   mochi --opencode [dir]          opencode instead
 #   MOCHI_DEBUG=1 mochi             pet/bridge logs in ~/.cache/mochi/pet.log
 set -uo pipefail
-ROOT="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+# resolve symlinks portably (macOS has no `readlink -f` on older versions)
+SRC="$0"; while [ -L "$SRC" ]; do L="$(readlink "$SRC")"; case "$L" in /*) SRC="$L" ;; *) SRC="$(dirname "$SRC")/$L" ;; esac; done
+ROOT="$(cd "$(dirname "$SRC")/.." && pwd)"
+abspath() { (cd "$1" && pwd -P); }
 set -a; [ -f "$ROOT/.env" ] && . "$ROOT/.env"; set +a
 
 HARNESS="${MOCHI_HARNESS:-claude}"
@@ -14,7 +17,7 @@ case "${1:-}" in
   --claude)   HARNESS=claude; shift ;;
 esac
 DIR="$PWD"
-if [ $# -gt 0 ] && [ -d "$1" ]; then DIR="$(readlink -f "$1")"; shift; fi
+if [ $# -gt 0 ] && [ -d "$1" ]; then DIR="$(abspath "$1")"; shift; fi
 export DEFAULT_PROJECT="$DIR" MOCHI_HARNESS="$HARNESS"
 
 PORT="${MOCHI_PORT:-8787}"
@@ -26,10 +29,20 @@ json_str() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; printf '"%s"' "$s"; }
 # ---- the cat (Electron → bridge) ----
 PET_PGID=""
 if ! up; then
-  # The display backend must be picked on the command line; main.js is too late.
-  FLAGS=(--ozone-platform=x11 --log-level=3); [ -n "${MOCHI_DEBUG:-}" ] && FLAGS=(--ozone-platform=x11)
-  ELECTRON_OZONE_PLATFORM_HINT=x11 setsid electron "${FLAGS[@]}" "$ROOT/desktop/main.js" >"$LOG" 2>&1 < /dev/null &
+  if [ -x "$ROOT/node_modules/.bin/electron" ]; then ELECTRON="$ROOT/node_modules/.bin/electron"
+  elif command -v electron >/dev/null; then ELECTRON=electron
+  else echo "Electron not found. Run ./install.sh (or: bun install) in $ROOT"; exit 1; fi
+  command -v bun >/dev/null || { echo "Bun not found: https://bun.sh"; exit 1; }
+  FLAGS=(); [ -z "${MOCHI_DEBUG:-}" ] && FLAGS+=(--log-level=3)
+  if [ "$(uname)" = Linux ]; then
+    # Wayland desktops ignore always-on-top for native Wayland windows → run under XWayland.
+    # It must be chosen on the command line; setting it from main.js is too late.
+    FLAGS+=(--ozone-platform=x11); export ELECTRON_OZONE_PLATFORM_HINT=x11
+  fi
+  set -m  # own process group, so we can stop the cat (and its bridge) together
+  "$ELECTRON" "${FLAGS[@]}" "$ROOT/desktop/main.js" >"$LOG" 2>&1 < /dev/null &
   PET_PGID=$!
+  set +m
   printf '🐱 waking Mochi up'
   for _ in $(seq 1 80); do up && break; printf '.'; sleep 0.25; done; echo
   up || { echo "Mochi failed to start, see $LOG"; exit 1; }
@@ -67,10 +80,12 @@ if [ -n "${TMUX:-}" ]; then
 fi
 
 # Otherwise: a private tmux server (-L mochi) so the cat can type into Claude Code.
+command -v tmux >/dev/null || { echo "tmux is required for Claude Code mode (the cat types into Claude through it). Install tmux, or use: mochi --opencode"; cleanup; exit 1; }
+command -v claude >/dev/null || { echo "Claude Code CLI not found: https://claude.com/claude-code"; cleanup; exit 1; }
 T=(tmux -L mochi)
 NAME="mochi-$(basename "$DIR" | tr -c 'a-zA-Z0-9_\n-' '-')-$$"
 CMD=$(printf '%q ' claude --settings "$HOOKS" "$@")
-PANE=$("${T[@]}" new-session -d -s "$NAME" -c "$DIR" -x "$(tput cols)" -y "$(tput lines)" -P -F '#{pane_id}' "$CMD")
+PANE=$("${T[@]}" new-session -d -s "$NAME" -c "$DIR" -x "$(tput cols 2>/dev/null || echo 120)" -y "$(tput lines 2>/dev/null || echo 40)" -P -F '#{pane_id}' "$CMD")
 "${T[@]}" set -s escape-time 0 \; set -t "$NAME" status off \; set -t "$NAME" mouse on \
   \; set -as terminal-features ',*:RGB' >/dev/null 2>&1
 SOCK=$("${T[@]}" display -p -t "$NAME" '#{socket_path}')

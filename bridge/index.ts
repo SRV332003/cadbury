@@ -64,7 +64,7 @@ Bun.serve({
 
     if (path === "/api/state") {
       return json({
-        mood: state.mood, status: state.status, directory: state.directory,
+        mood: state.mood, status: state.status, directory: state.directory, harness: state.harness,
         sessionID: state.sessionID, title: state.sessionTitle, busy: state.busy, activity: state.activity.slice(-10),
       });
     }
