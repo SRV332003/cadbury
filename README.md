@@ -83,7 +83,7 @@ All settings live in `.env`; see [`.env.example`](.env.example) for the full lis
 | `VOICE_PROVIDER` | `gemini` | `gemini` or `openai` |
 | `GEMINI_VOICE` / `REALTIME_VOICE` | `Leda` / `marin` | voice of the cat |
 | `MOCHI_HARNESS` | `claude` | default agent |
-| `MOCHI_LANGUAGE` | match you | e.g. `Hinglish`, `Hindi`, `Spanish` |
+| `MOCHI_LANGUAGE` | `Hinglish` in `.env.example` (empty = match you) | e.g. `Hinglish`, `Hindi`, `English`, `Spanish` |
 | `MOCHI_SCALE` | `1` | pet size (also right-click → Size) |
 | `MOCHI_BARGE_THRESHOLD` | `0.06` | lower = easier to interrupt the cat |
 | `MOCHI_SILENCE_MS` | `800` | pause length before the cat answers |
