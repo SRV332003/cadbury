@@ -6,7 +6,8 @@
 #   bin/cadbury-mac-app ~/Desktop    installs somewhere else
 #
 # Opening the app asks which project folder to work on (it remembers the last one),
-# then opens Terminal and runs `cadbury <folder>` there, exactly as if you typed it.
+# then opens iTerm (if installed) or Terminal and runs `cadbury <folder>` there, exactly as if
+# you typed it. Force one with CADBURY_APP_TERMINAL=iTerm|Terminal when building.
 # The app points at this checkout, so run this again if you move the cadbury folder.
 set -euo pipefail
 [ "$(uname)" = Darwin ] || { echo "Cadbury.app is for macOS only."; exit 1; }
@@ -41,7 +42,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>${VERSION:-0.0.0}</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSAppleEventsUsageDescription</key><string>Cadbury opens Terminal to start your coding agent.</string>
+  <key>NSAppleEventsUsageDescription</key><string>Cadbury opens your terminal (iTerm or Terminal) to start your coding agent.</string>
 </dict>
 </plist>
 PLIST
@@ -51,6 +52,7 @@ PLIST
 {
   echo '#!/bin/bash'
   printf 'ROOT=%q\n' "$ROOT"
+  printf 'TERMINAL_APP=%q\n' "${CADBURY_APP_TERMINAL:-auto}"
   cat <<'LAUNCHER'
 CONF="$HOME/.config/cadbury"; LAST="$CONF/app-last-folder"
 last="$(cat "$LAST" 2>/dev/null || true)"; [ -d "$last" ] || last="$HOME"
@@ -66,7 +68,22 @@ AS
 dir="${dir%/}"; [ -n "$dir" ] || dir="/"
 mkdir -p "$CONF" && printf '%s\n' "$dir" > "$LAST"
 
-# Run cadbury in a new Terminal window (it needs a terminal: Claude Code lives there).
+# Run cadbury in a new terminal window (it needs a terminal: Claude Code lives there).
+# macOS grants the mic to that terminal app, so prefer iTerm when it's installed.
+term="$TERMINAL_APP"
+if [ "$term" = auto ]; then open -Ra iTerm >/dev/null 2>&1 && term=iTerm || term=Terminal; fi
+if [ "$term" = iTerm ]; then
+osascript - "$ROOT/bin/cadbury" "$dir" <<'AS'
+on run argv
+  tell application "iTerm"
+    activate
+    set w to (create window with default profile)
+    tell current session of w to write text (quoted form of (item 1 of argv) & " " & quoted form of (item 2 of argv))
+  end tell
+end run
+AS
+exit
+fi
 osascript - "$ROOT/bin/cadbury" "$dir" <<'AS'
 on run argv
   tell application "Terminal"

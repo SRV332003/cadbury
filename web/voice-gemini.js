@@ -76,7 +76,9 @@ class GeminiVoice extends EventTarget {
       ws.onerror = () => {};
     } catch (e) {
       console.error(e);
-      this.emit("error", e.message || String(e));
+      this.emit("error", e?.name === "NotAllowedError"
+        ? "mic blocked. On a Mac: System Settings → Privacy & Security → Microphone → turn on your terminal app, then restart it"
+        : e.message || String(e));
       this.stop();
     }
   }

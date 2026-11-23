@@ -1,5 +1,5 @@
 // Cadbury desktop pet: transparent, frameless, always-on-top window that hosts the cat UI.
-const { app, BrowserWindow, ipcMain, Menu, Tray, globalShortcut, screen, session, Notification, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, Tray, globalShortcut, screen, session, Notification, nativeImage, systemPreferences, shell } = require("electron");
 const { spawn } = require("node:child_process");
 const path = require("node:path");
 const http = require("node:http");
@@ -146,7 +146,22 @@ async function getState() {
   });
 }
 
+// macOS asks for mic permission per *app*. Started from a terminal, that app is the terminal
+// (iTerm, Terminal…), not Electron. Ask up front and say clearly which app needs the switch.
+async function checkMacMic() {
+  if (process.platform !== "darwin") return;
+  const term = { "iTerm.app": "iTerm", Apple_Terminal: "Terminal" }[process.env.TERM_PROGRAM] || process.env.TERM_PROGRAM || "the app that started Cadbury";
+  let st = systemPreferences.getMediaAccessStatus("microphone");
+  if (st === "not-determined") st = (await systemPreferences.askForMediaAccess("microphone")) ? "granted" : "denied";
+  console.log(`[cadbury] macOS microphone access: ${st} (checked for ${term})`);
+  if (st !== "denied" && st !== "restricted") return;
+  console.warn(`[cadbury] mic blocked by macOS: System Settings → Privacy & Security → Microphone → turn on ${term}, then restart it`);
+  if (Notification.isSupported()) new Notification({ title: "Cadbury can't hear you 🙉", body: `Turn on ${term} in Privacy & Security → Microphone, then restart ${term}.` }).show();
+  shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone");
+}
+
 app.whenReady().then(async () => {
+  checkMacMic().catch((e) => console.error("[cadbury] mic check failed:", e));
   session.defaultSession.setPermissionRequestHandler((_wc, perm, cb) => cb(["media", "audioCapture", "notifications"].includes(perm)));
   session.defaultSession.setPermissionCheckHandler((_wc, perm) => ["media", "audioCapture", "notifications"].includes(perm));
 

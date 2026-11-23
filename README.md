@@ -72,7 +72,9 @@ Prefer clicking an icon to typing `cadbury`? On macOS run:
 bin/cadbury-mac-app        # creates /Applications/Cadbury.app (or ~/Applications if /Applications isn't writable)
 ```
 
-Then open **Cadbury** from Launchpad, Spotlight (⌘Space → "Cadbury") or the Dock. It asks which project folder to work on (and remembers your last pick), then opens Terminal and runs `cadbury <that folder>` for you. Claude Code needs a terminal to live in, so a Terminal window opening is expected. The first time, macOS asks whether Cadbury may control Terminal: say OK.
+Then open **Cadbury** from Launchpad, Spotlight (⌘Space → "Cadbury") or the Dock. It asks which project folder to work on (and remembers your last pick), then opens iTerm (if you have it) or Terminal and runs `cadbury <that folder>` for you. Claude Code needs a terminal to live in, so a terminal window opening is expected. The first time, macOS asks whether Cadbury may control that terminal: say OK. Build with `CADBURY_APP_TERMINAL=Terminal` (or `iTerm`) to pick one yourself.
+
+**Microphone on macOS:** macOS gives mic access to the *terminal app* that started Cadbury (iTerm, Terminal…), not to the cat. If the cat can't hear you, open System Settings → Privacy & Security → Microphone, turn that terminal on, and restart it. Cadbury checks this when it starts: it asks for access, writes `macOS microphone access: …` to `~/.cache/cadbury/pet.log`, and opens that settings page if access is blocked.
 
 The app is a small launcher that points at this checkout. If you move the `cadbury` folder, run `bin/cadbury-mac-app` again. To remove it, drag `Cadbury.app` to the Trash.
 

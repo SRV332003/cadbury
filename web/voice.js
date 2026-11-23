@@ -47,7 +47,9 @@ class Voice extends EventTarget {
       await pc.setRemoteDescription({ type: "answer", sdp: await res.text() });
     } catch (e) {
       console.error(e);
-      this.emit("error", e.message || String(e));
+      this.emit("error", e?.name === "NotAllowedError"
+        ? "mic blocked. On a Mac: System Settings → Privacy & Security → Microphone → turn on your terminal app, then restart it"
+        : e.message || String(e));
       this.stop();
     }
   }
