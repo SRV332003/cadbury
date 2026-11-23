@@ -98,7 +98,11 @@ Running Hermes itself was considered and rejected. It's a full agent with shell 
 
 **We add an end-of-conversation review.** Hermes reviews every 10 turns. Voice conversations are often shorter than that, so Cadbury also reviews when you go quiet for 5 minutes.
 
-**We use a separate small model for the review.** Hermes reruns its main model. Ours is a live audio session that can't be paused to do bookkeeping. A 4B model on your laptop is enough for "pick out the facts", costs nothing, and keeps your conversations local. If none is set up, the review simply doesn't run.
+**We use a separate small model for the review.** Hermes reruns its main model. Ours is a live audio session that can't be paused to do bookkeeping. "Pick out the facts" needs only a small model, and `llm.ts` speaks the OpenAI chat API, so there are two easy choices:
+- **Gemini**, the default suggestion. If `CADBURY_MEMORY_MODEL` starts with `gemini`, the client uses Google's OpenAI-compatible endpoint and the existing `GEMINI_API_KEY`. Nothing to install. Tested with `gemini-flash-lite-latest`: it pulled four correct facts from a Hinglish chat and ignored an injection planted in agent output.
+- **Ollama**, for fully local, e.g. `qwen3:4b` on a 16 GB Mac.
+
+If neither is set up, the review simply doesn't run. Busy servers (HTTP 429 or 5xx, common on Gemini's free tier) are retried after 2, 6 and 15 seconds. A review that still fails doesn't mark the conversation as reviewed, so the next review sees it again.
 
 **We use SQLite, not Postgres.** It's built into Bun, needs no server, and keeps Cadbury installable with no extra steps. The diary is small (one person's conversations).
 

@@ -8,7 +8,7 @@ import { mintToken } from "./realtime";
 import { geminiSocket, newLiveClient, GEMINI_MODEL } from "./gemini";
 import { handleHook } from "./claude";
 import { recordTurn, overview as memoryOverview, decidePending } from "./memory";
-import { llmConfigured, LLM_MODEL } from "./memory/llm";
+import { llmConfigured, llmIsLocal, LLM_MODEL } from "./memory/llm";
 
 const VOICE_PROVIDER = (process.env.VOICE_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
 
@@ -159,6 +159,6 @@ Bun.serve({
 });
 
 console.log(`[cadbury] voice: ${VOICE_PROVIDER === "gemini" ? `Gemini Live (${GEMINI_MODEL})` : "OpenAI Realtime"}`);
-console.log(`[cadbury] memory review: ${llmConfigured() ? LLM_MODEL : "off (see docs/MEMORY.md to turn it on)"}`);
+console.log(`[cadbury] memory review: ${llmConfigured() ? `${LLM_MODEL} (${llmIsLocal() ? "local" : "cloud"})` : "off (see docs/MEMORY.md to turn it on)"}`);
 console.log(`[cadbury] bridge on http://127.0.0.1:${PORT}  (opencode at ${OC_URL})`);
 console.log(`[cadbury] attach the TUI with:  opencode attach ${OC_URL} --dir <project>`);

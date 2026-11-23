@@ -24,6 +24,7 @@ Rules:
 - Never turn a one-off request into a standing preference, unless the user marked it as general ("always", "from now on", "remember", "hamesha", "yaad rakhna").
 - Write declarative facts, not orders: "User prefers short answers", not "Always answer briefly".
 - One fact per entry, under 150 characters, in English even if the user spoke Hindi or Hinglish.
+- Pick the right target. Anything about the code, repo, stack, deployment or conventions of the project goes to "project", never "user". Example: "we deploy on Fly.io" → project: "Project deploys to Fly.io". "I write Go" → user: "User mostly writes Go".
 - Skip: anything already in memory, today's task or bug, secrets, guesses about personality or feelings.
 - You may only add. If an existing entry is now wrong, you may propose a patch or remove; it will wait for the user's approval.
 - If nothing is worth saving, reply exactly: nothing to save.`;
@@ -33,20 +34,32 @@ const WHO = { user: "USER", cat: "CADBURY", task: "TASK SENT TO AGENT", agent: "
 let running = false;
 const turnCounts = new Map<number, number>();
 let idleTimer: Timer | undefined;
+let lastSession: number | undefined;
+
+/** Review and close a conversation; waits its turn if another review is running. */
+async function closeOut(sessionId: number, why: string) {
+  for (let i = 0; running && i < 60; i++) await Bun.sleep(2000);
+  turnCounts.delete(sessionId);
+  await review(sessionId, why);
+  endSession(sessionId);
+}
 
 /** Called for every logged line. Counts user turns and schedules a review when due. */
 export function noteTurn(sessionId: number, role: string) {
+  // moved to another conversation (e.g. switched project): don't leave the old one unreviewed
+  if (lastSession !== undefined && lastSession !== sessionId) {
+    clearTimeout(idleTimer);
+    const prev = lastSession;
+    setTimeout(() => closeOut(prev, "switched conversation"), 1000);
+  }
+  lastSession = sessionId;
   if (role === "user") turnCounts.set(sessionId, (turnCounts.get(sessionId) ?? 0) + 1);
   if ((turnCounts.get(sessionId) ?? 0) >= EVERY_TURNS) {
     turnCounts.set(sessionId, 0);
     setTimeout(() => review(sessionId, "every " + EVERY_TURNS + " turns"), 3000); // after the reply, not during it
   }
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(async () => {
-    turnCounts.delete(sessionId);
-    await review(sessionId, "conversation went quiet");
-    endSession(sessionId);
-  }, IDLE_MS);
+  idleTimer = setTimeout(() => closeOut(sessionId, "conversation went quiet"), IDLE_MS);
 }
 
 export async function review(sessionId: number, why: string): Promise<{ saved: number; note: string }> {

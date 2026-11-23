@@ -85,7 +85,7 @@ Cadbury remembers you between conversations. Tell it *"mera naam Aman hai, aur a
 - It keeps three small notebooks: **about you**, **about each project**, and **its own notes**. They're plain text in `~/.config/cadbury/memory/`, so you can read and edit them.
 - It keeps a **diary** of past conversations, so you can ask *"what did we do yesterday?"*.
 - Say *"forget that"* or *"forget everything"* to remove things.
-- **Optional:** with a small local model (e.g. `qwen3:4b` through Ollama), Cadbury also looks back at conversations and notices things worth keeping on its own. It can only add; changes to existing notes wait for your OK.
+- **Optional:** with a helper model (your existing Gemini key, or a local model such as `qwen3:4b` through Ollama), Cadbury also looks back at conversations and notices things worth keeping on its own. It can only add; changes to existing notes wait for your OK.
 
 Everything stays on your machine, except that the notebooks are shared with your voice provider during a conversation. Full guide, including setup and privacy: **[docs/MEMORY.md](docs/MEMORY.md)**.
 
@@ -103,7 +103,7 @@ All settings live in `.env`; see [`.env.example`](.env.example) for the full lis
 | `CADBURY_BARGE_THRESHOLD` | `0.06` | lower = easier to interrupt the cat |
 | `CADBURY_SILENCE_MS` | `800` | pause length before the cat answers |
 | `CADBURY_HALF_DUPLEX` | off | set `1` if the cat hears its own voice |
-| `CADBURY_MEMORY_LLM_URL` / `CADBURY_MEMORY_MODEL` | off | optional local model that notices things worth remembering ([guide](docs/MEMORY.md#setup-the-helper-model-optional)) |
+| `CADBURY_MEMORY_MODEL` | off | optional helper that notices things worth remembering: `gemini-flash-lite-latest` reuses your Gemini key, or point it at a local Ollama model ([guide](docs/MEMORY.md#setup-the-helper-model-optional)) |
 
 Your choices for size and language are remembered in `~/.config/cadbury/prefs.json`.
 

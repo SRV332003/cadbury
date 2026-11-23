@@ -132,7 +132,7 @@ Your edits take effect the next time you start talking to Cadbury.
 | Notebooks, diary, suggestions | only on your computer, in `~/.config/cadbury/memory/` | you, and Cadbury while running |
 | Your notebooks during a conversation | sent to your voice provider (Gemini or OpenAI) as part of the cat's instructions | that provider, the same way your voice already is |
 | The diary | never sent anywhere as a whole; only the few lines a search finds are shared with the voice model | — |
-| The helper model's work | stays on your computer if you use Ollama; goes to that service if you point it at a hosted API | your choice |
+| The helper model's work | Option A (Gemini): the recent conversation is sent to Google for review. Option B (Ollama): stays on your computer. | your choice |
 
 Secrets that look like API keys, tokens or passwords are blanked out (`[REDACTED]`) before anything is written to the diary.
 
@@ -144,7 +144,30 @@ Secrets that look like API keys, tokens or passwords are blanked out (`[REDACTED
 
 Memory works without any extra setup. Saving what you tell it and searching the diary need nothing installed. The helper model only adds the "look back and notice things" part.
 
-**Recommended on a Mac (16 GB RAM is plenty):**
+There are two ways to get one. Pick whichever suits you:
+
+| | **Option A: your Gemini key** | **Option B: a model on your Mac** |
+|---|---|---|
+| Setup | one line in `.env` | install Ollama + download about 2.5 GB |
+| Cost | free tier (shares the voice key's limits) | free |
+| Where conversations go for review | Google, which already hears your voice if you use Gemini voice | nowhere; stays on your Mac |
+| Speed | a few seconds | a few seconds on Apple Silicon |
+
+### Option A: use the Gemini key you already have (easiest)
+
+If `GEMINI_API_KEY` is already in your `.env` for the voice, add one line:
+
+```
+CADBURY_MEMORY_MODEL=gemini-flash-lite-latest
+```
+
+Restart `cadbury`. The bridge prints `memory review: gemini-flash-lite-latest (cloud)`. That's it. Cadbury reuses your key automatically; no URL is needed.
+
+`gemini-flash-lite-latest` always points at Google's current small, fast model, so it won't go stale. Any other Gemini model name your key can use also works (e.g. `gemini-flash-latest`).
+
+> **Heads-up:** Gemini's free tier is sometimes busy and answers "503, try again". Cadbury retries a few times by itself (you'll see `memory model busy… retrying` in the terminal). If it still fails, nothing is lost: the same conversation is looked at again on the next review.
+
+### Option B: a model on your Mac (most private)
 
 1. Install Ollama, the app that runs small models locally:
    ```bash
@@ -160,7 +183,7 @@ Memory works without any extra setup. Saving what you tell it and searching the 
    CADBURY_MEMORY_LLM_URL=http://127.0.0.1:11434/v1
    CADBURY_MEMORY_MODEL=qwen3:4b
    ```
-4. Restart `cadbury`. The bridge prints `memory review: qwen3:4b` when it starts.
+4. Restart `cadbury`. The bridge prints `memory review: qwen3:4b (local)` when it starts.
 
 The model only wakes up for a few seconds per review, then Ollama unloads it after a few idle minutes, so it doesn't eat your memory all day.
 
@@ -170,9 +193,9 @@ The model only wakes up for a few seconds per review, then Ollama unloads it aft
 
 | Setting | Default | What it does |
 |---|---|---|
-| `CADBURY_MEMORY_LLM_URL` | empty (off) | where the helper model lives |
-| `CADBURY_MEMORY_MODEL` | empty (off) | which model to use |
-| `CADBURY_MEMORY_LLM_KEY` | empty | only for hosted services that need a key |
+| `CADBURY_MEMORY_MODEL` | empty (off) | which model to use. A name starting with `gemini` uses your `GEMINI_API_KEY` automatically. |
+| `CADBURY_MEMORY_LLM_URL` | empty | where the helper model lives. Not needed for Gemini; for Ollama use `http://127.0.0.1:11434/v1`. |
+| `CADBURY_MEMORY_LLM_KEY` | empty | only for other hosted services that need a key |
 | `CADBURY_MEMORY_REVIEW_TURNS` | `10` | how many things you say between look-backs |
 | `CADBURY_MEMORY_USER_CHARS` / `_PROJECT_CHARS` / `_NOTES_CHARS` | `1375` / `1500` / `2200` | notebook sizes, if you really want bigger ones |
 
@@ -195,7 +218,9 @@ Cadbury blocks notes that look like secrets, commands to the AI (*"ignore previo
 A note in the file (maybe one you edited) looks unsafe, so Cadbury hides it from the voice model. Open the file and fix or delete it.
 
 **"The terminal says `memory review failed`."**
-The helper model isn't reachable. Check that Ollama is running (`ollama list`) and that the URL and model name in `.env` match.
+The helper model isn't reachable.
+- **Gemini:** an `HTTP 503` or `429` means Google is busy or you've hit the free-tier limit. Nothing is lost; it will try again on the next review. `HTTP 400` or `404` usually means a typo in `CADBURY_MEMORY_MODEL`.
+- **Ollama:** check that it's running (`ollama list`) and that the URL and model name in `.env` match.
 
 ---
 
