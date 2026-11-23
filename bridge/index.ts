@@ -6,7 +6,7 @@ import { handleEvent, state, subscribe, setContext, emit, type UiEvent } from ".
 import { runTool } from "./tools";
 import { mintToken } from "./realtime";
 import { geminiSocket, newLiveClient, GEMINI_MODEL } from "./gemini";
-import { handleHook } from "./claude";
+import { handleHook, registerPane, listSessions, aliveCount, discover } from "./claude";
 import { recordTurn, overview as memoryOverview, decidePending } from "./memory";
 import { llmConfigured, llmIsLocal, LLM_MODEL } from "./memory/llm";
 
@@ -26,6 +26,9 @@ async function startOpencode() {
 }
 if (state.harness === "opencode") await startOpencode();
 setContext(state.directory);
+// Claude sessions still running from before a bridge restart. Test bridges set CADBURY_DISCOVER=0
+// so they never pick up (and type into) the user's real sessions.
+if (state.harness === "claude" && process.env.CADBURY_DISCOVER !== "0") discover();
 
 function authorized(req: Request) {
   // Requests proxied by `tailscale serve` carry the tailnet identity.
@@ -69,6 +72,7 @@ Bun.serve({
       return json({
         mood: state.mood, status: state.status, directory: state.directory, harness: state.harness,
         sessionID: state.sessionID, title: state.sessionTitle, busy: state.busy, activity: state.activity.slice(-10),
+        sessions: listSessions(),
       });
     }
 
@@ -76,9 +80,8 @@ Bun.serve({
     if (path === "/api/context" && req.method === "POST") {
       const { directory, harness, tmux, tmuxSocket } = await req.json().catch(() => ({}));
       if (harness === "claude" || harness === "opencode") state.harness = harness;
-      state.tmuxTarget = tmux || undefined;
-      state.tmuxSocket = tmuxSocket || undefined;
-      if (directory) { setContext(directory); state.busy = false; }
+      if (state.harness === "claude" && tmux) registerPane(directory || state.directory, tmux, tmuxSocket || undefined); // adds a session, focuses it
+      else if (directory) { setContext(directory); state.busy = false; }
       if (state.harness === "opencode") await startOpencode();
       console.log(`[cadbury] following ${state.harness} in ${state.directory}${state.tmuxTarget ? ` (tmux ${state.tmuxTarget})` : ""}`);
       return json({ ok: true, directory: state.directory, harness: state.harness });
@@ -88,9 +91,14 @@ Bun.serve({
     if (path === "/api/claude-hook" && req.method === "POST") {
       const event = url.searchParams.get("event") ?? "";
       const payload = await req.json().catch(() => ({}));
-      try { handleHook(event, payload); } catch (e) { console.warn("[cadbury] hook error", e); }
+      // bin/cadbury-hook adds the tmux pane Claude runs in, so the bridge knows which session spoke
+      const from = { pane: req.headers.get("x-cadbury-pane") || undefined, socket: req.headers.get("x-cadbury-socket") || undefined };
+      try { handleHook(event, payload, from); } catch (e) { console.warn("[cadbury] hook error", e); }
       return json({});
     }
+
+    // running Claude Code sessions (`alive` is what bin/cadbury checks before shutting the cat down)
+    if (path === "/api/sessions") return json({ alive: aliveCount(), sessions: listSessions() });
 
     // Global hotkey (GNOME custom shortcut → bin/cadbury-talk → here → cat toggles mic)
     if (path === "/api/hotkey" && req.method === "POST") {
@@ -138,6 +146,7 @@ Bun.serve({
           const send = (e: UiEvent) => ctrl.enqueue(enc.encode(`data: ${JSON.stringify(e)}\n\n`));
           send({ type: "context", directory: state.directory, sessionID: state.sessionID, title: state.sessionTitle });
           send({ type: "mood", mood: state.mood, status: state.status });
+          if (state.harness === "claude") send({ type: "sessions", sessions: listSessions() });
           unsub = subscribe(send);
           ping = setInterval(() => ctrl.enqueue(enc.encode(": ping\n\n")), 15000);
         },

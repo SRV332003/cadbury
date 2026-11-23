@@ -11,7 +11,8 @@ export type UiEvent =
   | { type: "activity"; text: string }
   | { type: "narrate"; text: string; speak: boolean; urgent?: boolean }
   | { type: "diff"; files: DiffFile[] }
-  | { type: "context"; directory: string; sessionID?: string; title?: string };
+  | { type: "context"; directory: string; sessionID?: string; title?: string }
+  | { type: "sessions"; focus?: number; sessions: { session: number; project: string; in_focus: boolean; busy: boolean; waiting_for_user: string | null }[] };
 
 export interface DiffFile { file?: string; additions: number; deletions: number; status?: string; patch?: string }
 

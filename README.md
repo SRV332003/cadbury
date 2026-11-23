@@ -65,6 +65,20 @@ The cat asks a clarifying question only when it really matters: a vague goal ("m
 `cadbury` starts the real `claude` CLI inside a private tmux session (`tmux -L cadbury`, status bar hidden, so it looks like a normal terminal). [Hooks](https://docs.claude.com/en/docs/claude-code/hooks), passed only to this session with `--settings`, tell the cat what Claude is doing. When you speak, the cat types into Claude. Permission answers are `1`, `2` or Esc, and "stop" is Esc. Your other `claude` sessions are untouched. If you're already inside tmux, Cadbury uses your current pane.
 Detach with `Ctrl-b d`; reattach with `tmux -L cadbury attach`.
 
+### Several Claude Code sessions at once
+Run `cadbury` in as many terminals as you like, for example one in your API repo and one in your web app. One cat follows all of them:
+
+- **One session is in focus.** The cat's mood follows it, and "fix the failing test" goes to it. The newest `cadbury` you started is in focus, and so is any session you type a message into.
+- **The others keep working in the background.** You won't hear their progress, but the cat tells you when one finishes ("the web one is done, navbar is sticky now"). It also asks you when one needs a permission or an answer, and says which project is asking.
+- **Talk to any of them by number or project name.**
+  - "What are all my sessions doing?" or "sab sessions ka status batao": a short rundown of each.
+  - "Tell the api one to run the tests" or "session 2 ko stop karo": acts on that session without switching.
+  - "Switch to web": moves the focus.
+  - "Yes, allow it": goes to whichever session is waiting, even if it isn't the one in focus.
+- **The panel shows a tab per session** (double-click the cat). Click a tab to focus it. ⋯ means it's working, ❓ means it's waiting for you.
+
+Closing one terminal doesn't put the cat to sleep while other sessions are still running. If the bridge restarts, it picks the sessions in `tmux -L cadbury` back up on its own. Plain `claude` sessions you started without `cadbury` aren't visible to the cat: it has no hooks there and no tmux pane to type into.
+
 ### Upgrading from Mochi
 Cadbury used to be called Mochi. Old setups keep working: `mochi`, `bin/mochi-talk` and `bin/mochi-hook` still exist and run the Cadbury versions, `MOCHI_*` settings in `.env` are used when the matching `CADBURY_*` one isn't set, and `~/.config/mochi/prefs.json` is read until Cadbury saves its own `~/.config/cadbury/prefs.json`. Claude sessions you left running before the upgrade are on the old tmux server: `tmux -L mochi attach`.
 

@@ -146,6 +146,13 @@ body.remote .panel { position: static; width: min(100%, 640px); height: 50vh; }
 .panel-head { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eadfd2; font-size: 12.5px; }
 .panel-head span { color: var(--muted); flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .panel-head button { border: 0; background: none; cursor: pointer; font-size: 14px; color: var(--muted); }
+/* running Claude Code sessions: one tab each, click to follow it (hidden with only one) */
+.sessions { display: flex; gap: 4px; flex-wrap: wrap; padding: 6px 10px; border-bottom: 1px solid #eadfd2; }
+.sessions:empty { display: none; }
+.sessions button { border: 1px solid #eadfd2; background: transparent; color: var(--ink); border-radius: 10px; padding: 2px 8px; font-size: 11.5px; cursor: pointer; }
+.sessions button.on { background: #b4541a; border-color: #b4541a; color: #fff; }
+.sessions button.busy::after { content: " ⋯"; }
+.sessions button.wait::after { content: " ❓"; }
 .feed { flex: 1; overflow: auto; padding: 8px 10px; font-size: 12.5px; }
 .feed .row { margin: 3px 0; }
 .feed .you { color: #1f6fb2; } .feed .cat { color: #b4541a; } .feed .act { color: var(--muted); font-family: ui-monospace, monospace; font-size: 11.5px; }

@@ -50,6 +50,20 @@ function showDiff(files) {
     d.appendChild(det);
   }
 }
+// one tab per running Claude Code session (only shown when there are two or more)
+function showSessions(list = []) {
+  const box = $("#sessions");
+  box.replaceChildren();
+  if (list.length < 2) return;
+  for (const s of list) {
+    const b = document.createElement("button");
+    b.textContent = `${s.session} ${s.project}`;
+    b.title = s.waiting_for_user ? `waiting: ${s.waiting_for_user}` : s.busy ? (s.current_step ?? "working") : "idle";
+    b.className = [s.in_focus && "on", s.busy && "busy", s.waiting_for_user && "wait"].filter(Boolean).join(" ");
+    b.onclick = () => fetch("/api/tool/focus_session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ session: String(s.session) }) });
+    box.appendChild(b);
+  }
+}
 function openPanel(open = true) { $("#panel").classList.toggle("hidden", !open); window.cadbury?.panel(open); }
 
 // ---------- bridge event stream ----------
@@ -70,6 +84,7 @@ function connectBridge() {
         $("#sess").textContent = e.title ?? (e.sessionID ? e.sessionID.slice(0, 14) : "no session yet");
         break;
       }
+      case "sessions": showSessions(e.sessions); break;
       case "diff": showDiff(e.files); break;
       case "hotkey": if (!isRemote) talkToggle(); break;
       case "narrate": {

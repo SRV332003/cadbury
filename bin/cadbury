@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # cadbury: your coding agent in this terminal + a floating voice cat that follows it.
 #
-#   cadbury [dir] [claude args…]      Claude Code (your subscription), default
+#   cadbury [dir] [claude args…]      Claude Code (your subscription), default.
+#                                     Run it in several terminals: the cat follows all of them.
 #   cadbury --opencode [dir]          opencode instead
 #   CADBURY_DEBUG=1 cadbury             pet/bridge logs in ~/.cache/cadbury/pet.log
 set -uo pipefail
@@ -45,11 +46,23 @@ if ! up; then
   "$ELECTRON" ${FLAGS[@]+"${FLAGS[@]}"} "$ROOT/desktop/main.js" >"$LOG" 2>&1 < /dev/null &
   PET_PGID=$!
   set +m
+  disown 2>/dev/null  # if this terminal closes, the cat keeps running for the other sessions
   printf '🐱 waking Cadbury up'
   for _ in $(seq 1 80); do up && break; printf '.'; sleep 0.25; done; echo
   up || { echo "Cadbury failed to start, see $LOG"; exit 1; }
 fi
-cleanup() { [ -n "$PET_PGID" ] && kill -- -"$PET_PGID" 2>/dev/null; }
+# Stop the cat when this terminal's agent exits, but only if this launcher started it and no other
+# Claude Code session is still using it (you can run `cadbury` in several terminals at once).
+cleanup() {
+  [ -n "$PET_PGID" ] || return 0
+  local left
+  left=$(curl -sf "http://127.0.0.1:$PORT/api/sessions" 2>/dev/null | grep -o '"alive":[0-9]*' | cut -d: -f2)
+  if [ "${left:-0}" -gt 0 ]; then
+    echo "🐱 Cadbury stays up: $left other Claude Code session(s) still running."
+    return 0
+  fi
+  kill -- -"$PET_PGID" 2>/dev/null
+}
 
 register() { # $1 = tmux socket, $2 = tmux pane
   curl -sf -XPOST "http://127.0.0.1:$PORT/api/context" -H 'content-type: application/json' \

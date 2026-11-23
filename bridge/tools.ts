@@ -44,6 +44,11 @@ async function ensureSession(): Promise<string> {
   return s.id;
 }
 
+// Optional on tools that act on a coding session. Claude Code can have several running at once.
+const SESSION_DESC =
+  "Optional. Which running Claude Code session to act on: its number or project name from list_running_sessions. Omit to use the one in focus (or, for answers, the one that is waiting).";
+const SESSION = { session: { type: "string", description: SESSION_DESC } };
+
 export const toolSchemas = [
   {
     type: "function",
@@ -66,12 +71,12 @@ export const toolSchemas = [
       "Also use this for questions about the codebase that require reading files.",
     parameters: {
       type: "object",
-      properties: { instruction: { type: "string", description: "Clear, self-contained instruction for the coding agent" } },
+      properties: { instruction: { type: "string", description: "Clear, self-contained instruction for the coding agent" }, ...SESSION },
       required: ["instruction"],
     },
   },
-  { type: "function", name: "task_status", description: "What the coding agent is doing right now: current step, todo list, recent activity, any pending permission/question.", parameters: { type: "object", properties: {} } },
-  { type: "function", name: "stop_task", description: "Stop / abort the running coding task.", parameters: { type: "object", properties: {} } },
+  { type: "function", name: "task_status", description: "What the coding agent is doing right now: current step, todo list, recent activity, any pending permission/question.", parameters: { type: "object", properties: { ...SESSION } } },
+  { type: "function", name: "stop_task", description: "Stop / abort the running coding task.", parameters: { type: "object", properties: { ...SESSION } } },
   {
     type: "function",
     name: "answer_permission",
@@ -81,6 +86,7 @@ export const toolSchemas = [
       properties: {
         reply: { type: "string", enum: ["once", "always", "reject"] },
         message: { type: "string", description: "Optional note to the agent, e.g. what to do instead when rejecting" },
+        ...SESSION,
       },
       required: ["reply"],
     },
@@ -91,11 +97,11 @@ export const toolSchemas = [
     description: "Answer the coding agent's pending multiple-choice question(s). One answer array per question, using option labels (or the user's own words).",
     parameters: {
       type: "object",
-      properties: { answers: { type: "array", items: { type: "array", items: { type: "string" } } } },
+      properties: { answers: { type: "array", items: { type: "array", items: { type: "string" } } }, ...SESSION },
       required: ["answers"],
     },
   },
-  { type: "function", name: "show_diff", description: "Get the list of files changed in this session (and show the diff on screen).", parameters: { type: "object", properties: {} } },
+  { type: "function", name: "show_diff", description: "Get the list of files changed in this session (and show the diff on screen).", parameters: { type: "object", properties: { ...SESSION } } },
   { type: "function", name: "list_projects", description: "List project folders the user can switch to.", parameters: { type: "object", properties: {} } },
   {
     type: "function",
@@ -103,13 +109,27 @@ export const toolSchemas = [
     description: "Switch the working project (folder). Resumes its most recent session.",
     parameters: { type: "object", properties: { name: { type: "string", description: "Project folder name (fuzzy)" } }, required: ["name"] },
   },
-  { type: "function", name: "new_session", description: "Start a fresh coding-agent session in the current project.", parameters: { type: "object", properties: {} } },
+  { type: "function", name: "new_session", description: "Start a fresh coding-agent session in the current project.", parameters: { type: "object", properties: { ...SESSION } } },
   { type: "function", name: "list_sessions", description: "List recent sessions in the current project.", parameters: { type: "object", properties: {} } },
   {
     type: "function",
     name: "resume_session",
     description: "Resume a session from list_sessions by id.",
     parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+  },
+  {
+    type: "function",
+    name: "list_running_sessions",
+    description:
+      "List every coding-agent session running right now (Claude Code can run in several terminals/projects at once): number, project, busy or idle, current step, last request, and whether it is waiting for the user. " +
+      "Use when the user asks about 'all sessions', 'the other one', or a session by project name.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    type: "function",
+    name: "focus_session",
+    description: "Switch which running session you follow and talk to by default (e.g. 'switch to the api one', 'go to session 2').",
+    parameters: { type: "object", properties: { session: { type: "string", description: "Session number or project name from list_running_sessions" } }, required: ["session"] },
   },
   ...memoryToolSchemas,
 ];
@@ -223,6 +243,19 @@ export const tools: Record<string, ToolFn> = {
     setContext(s.directory ?? state.directory, s.id, s.title);
     showInTui(s.id);
     return { ok: true, title: s.title };
+  },
+
+  // opencode has one server with many sessions; "running sessions" are its recent ones
+  async list_running_sessions() {
+    return { sessions: await tools.list_sessions({}) };
+  },
+
+  async focus_session({ session }) {
+    const list = (await tools.list_sessions({})) as { id: string; title: string }[];
+    const want = String(session ?? "").toLowerCase();
+    const hit = list.find((s) => s.id === session) ?? list[Number(want) - 1] ?? list.find((s) => s.title?.toLowerCase().includes(want));
+    if (!hit) return { ok: false, reason: `no session matching "${session}"`, sessions: list };
+    return tools.resume_session({ id: hit.id });
   },
 
   // long-term memory: the same for both harnesses (bridge/memory/)

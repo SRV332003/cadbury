@@ -26,7 +26,7 @@
 3. Writes `~/.cache/cadbury/claude-hooks.json`, which wires every hook event to `bin/cadbury-hook <Event>`.
 4. **Claude:** creates a detached session on a private tmux server, `tmux -L cadbury new-session … claude --settings <hooks>`, and registers the pane with `POST /api/context {directory, harness, tmux, tmuxSocket}`. Then it attaches. Inside an existing tmux it uses `$TMUX_PANE` instead.
 5. **opencode:** registers, then runs `opencode attach http://127.0.0.1:4096 --dir …`.
-6. When the TUI exits, it kills the pet's process group, but only if this launcher started the pet.
+6. When the TUI exits, it kills the pet's process group. It only does this if this launcher started the pet and `GET /api/sessions` reports no other running Claude session. Running `cadbury` in a second terminal adds a session; it doesn't replace the first one.
 
 **Electron (`desktop/main.js`)**: a frameless, transparent, always-on-top window, single instance. It:
 - loads `http://127.0.0.1:8787/`;
@@ -59,6 +59,12 @@ opencode mode is the same, except steps 2–6 use opencode's HTTP API (`prompt_a
 
 ## State the bridge keeps (state.ts)
 `harness`, `directory`, `sessionID`, `busy`, `mood` / `status`, `currentTool`, `todos`, `activity[]` (last 30), `lastText`, `pendingPermission`, `pendingQuestion`, `language`, `tmuxTarget` / `tmuxSocket`, `transcriptPath`, `hadError`. It all lives in memory; only `scale` and `language` persist (`~/.config/cadbury/prefs.json`).
+
+**Several Claude Code sessions (claude.ts).** Every `cadbury` terminal is one `ClaudeSession`, keyed by its tmux pane. Each session holds its own busy flag, step, todos, pending permission or question, last request and last answer. It also gets a stable number that you can say out loud.
+
+One session is *in focus*. `syncFocus()` copies it into the per-session fields of `state` listed above, so the mood, the panel and the generic tools keep working without knowing about multiple sessions.
+
+Hooks find their session through the pane headers that `cadbury-hook` adds. Voice tools find theirs through `pick(session)`. The others run in the background: they stay quiet while working, and they speak up when they finish or need you. See [PROTOCOLS.md](PROTOCOLS.md#claude-code-hooks--cat) for the exact rules.
 
 ## Long-term memory (bridge/memory/)
 Separately from `state`, the bridge keeps a long-term memory in `~/.config/cadbury/memory/`:

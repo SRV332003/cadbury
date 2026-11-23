@@ -20,7 +20,7 @@ bridge/             Bun server on 127.0.0.1:8787, the brain
   index.ts          routes; starts opencode only when needed
   env.ts            imported first: maps legacy MOCHI_* settings to CADBURY_*
   state.ts          shared state, moods, narration (+ language rule), prefs, opencode event → mood
-  claude.ts         Claude Code: hooks → moods/narration; tools via tmux send-keys; git diff
+  claude.ts         Claude Code: several sessions (one per tmux pane, one in focus); hooks → moods/narration; tools via tmux send-keys; git diff
   opencode.ts       opencode HTTP client + /global/event SSE
   tools.ts          voice tool schemas + opencode implementations + runTool() dispatcher
   realtime.ts       persona/instructions (shared) + OpenAI ephemeral token

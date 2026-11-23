@@ -5,8 +5,10 @@ Use a **separate test bridge on port 8799**, never the user's live one on 8787. 
 ```bash
 S=$(mktemp -d)                       # scratch
 mkdir -p $S/proj $S/cfg
-XDG_CONFIG_HOME=$S/cfg CADBURY_PORT=8799 CADBURY_HARNESS=claude DEFAULT_PROJECT=$S/proj \
+CADBURY_DISCOVER=0 XDG_CONFIG_HOME=$S/cfg CADBURY_PORT=8799 CADBURY_HARNESS=claude DEFAULT_PROJECT=$S/proj \
   bun bridge/index.ts > $S/bridge.log 2>&1 &
+# CADBURY_DISCOVER=0 matters: without it the test bridge adopts your real Claude sessions from
+# `tmux -L cadbury` and a test tool call could type into them.
 until curl -s localhost:8799/api/health >/dev/null; do sleep 0.3; done
 # …tests…
 kill $(ss -ltnp | grep ':8799' | grep -o 'pid=[0-9]*' | cut -d= -f2)   # don't pkill -f (it can match your own shell)
@@ -39,6 +41,20 @@ curl -s -XPOST localhost:8799/api/tool/code_task -d '{"instruction":"now print t
 cat -A $S/typed.txt        # expect: 1now print the date$
 tmux -L cadburytest kill-server
 ```
+(`cat -A` is GNU-only; on macOS use `cat -v`.)
+
+### Two sessions at once
+Make a second fake pane and register it the same way (`P2`, a second folder). The hook script reads `TMUX_PANE` and `TMUX` to say which pane it came from, so set them when simulating:
+```bash
+H2() { echo "$3" | TMUX_PANE=$1 TMUX="$SOCK,1,0" CADBURY_PORT=8799 bin/cadbury-hook $2; }
+H2 $P1 PermissionRequest "{\"session_id\":\"s1\",\"cwd\":\"$S/api\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"npm test\"}}"
+curl -s -XPOST localhost:8799/api/tool/list_running_sessions                            # both, #1 waiting
+curl -s -XPOST localhost:8799/api/tool/answer_permission -d '{"reply":"once"}'          # "1" lands in pane 1 even if #2 is in focus
+curl -s -XPOST localhost:8799/api/tool/code_task -d '{"instruction":"hi","session":"web"}'  # typed into pane 2, focus moves
+tmux -L cadburytest kill-session -t b; curl -s localhost:8799/api/sessions                # pane 2 dropped, alive: 1
+```
+Check `typed1.txt` and `typed2.txt`. Each should hold only what was meant for that pane. In the SSE stream, background narrations name the session ("background session #1 api").
+
 To check real hook payloads: run `claude -p "…" --settings hooks.json` with hooks that append stdin to a file (cheap prompt, uses the user's plan).
 
 ## 3. Gemini Live end to end (real API, needs GEMINI_API_KEY)
