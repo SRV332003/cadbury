@@ -65,6 +65,17 @@ The cat asks a clarifying question only when it really matters: a vague goal ("m
 `cadbury` starts the real `claude` CLI inside a private tmux session (`tmux -L cadbury`, status bar hidden, so it looks like a normal terminal). [Hooks](https://docs.claude.com/en/docs/claude-code/hooks), passed only to this session with `--settings`, tell the cat what Claude is doing. When you speak, the cat types into Claude. Permission answers are `1`, `2` or Esc, and "stop" is Esc. Your other `claude` sessions are untouched. If you're already inside tmux, Cadbury uses your current pane.
 Detach with `Ctrl-b d`; reattach with `tmux -L cadbury attach`.
 
+### Mac app (optional)
+Prefer clicking an icon to typing `cadbury`? On macOS run:
+
+```bash
+bin/cadbury-mac-app        # creates /Applications/Cadbury.app (or ~/Applications if /Applications isn't writable)
+```
+
+Then open **Cadbury** from Launchpad, Spotlight (⌘Space → "Cadbury") or the Dock. It asks which project folder to work on (and remembers your last pick), then opens Terminal and runs `cadbury <that folder>` for you. Claude Code needs a terminal to live in, so a Terminal window opening is expected. The first time, macOS asks whether Cadbury may control Terminal: say OK.
+
+The app is a small launcher that points at this checkout. If you move the `cadbury` folder, run `bin/cadbury-mac-app` again. To remove it, drag `Cadbury.app` to the Trash.
+
 ### Upgrading from Mochi
 Cadbury used to be called Mochi. Old setups keep working: `mochi`, `bin/mochi-talk` and `bin/mochi-hook` still exist and run the Cadbury versions, `MOCHI_*` settings in `.env` are used when the matching `CADBURY_*` one isn't set, and `~/.config/mochi/prefs.json` is read until Cadbury saves its own `~/.config/cadbury/prefs.json`. Claude sessions you left running before the upgrade are on the old tmux server: `tmux -L mochi attach`.
 

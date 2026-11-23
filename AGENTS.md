@@ -14,6 +14,7 @@ Read these before changing things:
 bin/cadbury         launcher: starts the pet (if not running), registers folder/harness, runs claude-in-tmux or opencode attach
 bin/cadbury-hook    Claude Code hook → POST /api/claude-hook (must never block or fail)
 bin/cadbury-talk    toggle the mic (for OS keyboard shortcuts on Wayland)
+bin/cadbury-mac-app build Cadbury.app (macOS launcher: folder picker → Terminal running bin/cadbury)
 bin/mochi*          legacy names from before the rename; thin wrappers, keep them so old links/shortcuts/sessions work
 install.sh          requirement checks, Electron, .env, ~/.local/bin/cadbury
 bridge/             Bun server on 127.0.0.1:8787, the brain

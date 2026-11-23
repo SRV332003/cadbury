@@ -27,7 +27,7 @@ fi
 
 if [ ! -f .env ]; then cp .env.example .env; ok "created .env (add GEMINI_API_KEY or OPENAI_API_KEY for voice)"
 else ok ".env already exists (left untouched)"; fi
-chmod +x bin/cadbury bin/cadbury-hook bin/cadbury-talk bin/mochi bin/mochi-hook bin/mochi-talk
+chmod +x bin/cadbury bin/cadbury-hook bin/cadbury-talk bin/cadbury-mac-app bin/mochi bin/mochi-hook bin/mochi-talk
 
 BIN="${CADBURY_BIN_DIR:-${MOCHI_BIN_DIR:-$HOME/.local/bin}}"
 mkdir -p "$BIN"
@@ -42,3 +42,5 @@ Done. Next:
   2. cd into a project and run:  cadbury
   3. Click the cat to talk.  (Docs: $ROOT/README.md)
 MSG
+[ "$(uname)" = Darwin ] && echo "  On a Mac you can also make a Launchpad/Dock app:  $ROOT/bin/cadbury-mac-app"
+true
