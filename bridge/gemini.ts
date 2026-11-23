@@ -38,7 +38,7 @@ function setupMessage(handle?: string) {
           startOfSpeechSensitivity: "START_SENSITIVITY_HIGH", // notice you quickly when you cut in
           endOfSpeechSensitivity: "END_SENSITIVITY_LOW",      // don't jump in during short pauses
           prefixPaddingMs: 40,
-          silenceDurationMs: Number(process.env.MOCHI_SILENCE_MS ?? 800),
+          silenceDurationMs: Number(process.env.CADBURY_SILENCE_MS ?? 800),
         },
         activityHandling: "START_OF_ACTIVITY_INTERRUPTS",
       },
@@ -94,7 +94,7 @@ function hop(ws: ServerWebSocket<LiveClient>, why: string) {
   clearTimeout(c.hopTimer);
   c.hopAt = undefined;
   if (c.closed) return;
-  console.log(`[mochi] gemini: reconnecting (${why}), resuming conversation`);
+  console.log(`[cadbury] gemini: reconnecting (${why}), resuming conversation`);
   const old = c.up;
   c.up = undefined;
   try { old?.close(); } catch {}
@@ -107,7 +107,7 @@ function connectUpstream(ws: ServerWebSocket<LiveClient>) {
   c.generating = false;
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    ws.send(JSON.stringify({ mochi: "error", message: "GEMINI_API_KEY is not set in voicecode/.env" }));
+    ws.send(JSON.stringify({ cadbury: "error", message: "GEMINI_API_KEY is not set in voicecode/.env" }));
     ws.close();
     return;
   }
@@ -125,14 +125,14 @@ function connectUpstream(ws: ServerWebSocket<LiveClient>) {
 
     if (m.setupComplete) {
       const resumed = !!usedHandle;
-      if (c.retries > 0) console.log(`[mochi] gemini: back online${resumed ? " (conversation resumed)" : ""}`);
+      if (c.retries > 0) console.log(`[cadbury] gemini: back online${resumed ? " (conversation resumed)" : ""}`);
       c.ready = true;
       c.retries = 0;
       c.alreadyTries = 0;
       c.limitTries = 0;
       for (const q of c.queue.splice(0)) up.send(q);
       for (const a of c.audioBuf.splice(0)) up.send(a);
-      ws.send(JSON.stringify({ mochi: "ready", model: GEMINI_MODEL, resumed }));
+      ws.send(JSON.stringify({ cadbury: "ready", model: GEMINI_MODEL, resumed }));
       return;
     }
     if (m.sessionResumptionUpdate) {
@@ -146,7 +146,7 @@ function connectUpstream(ws: ServerWebSocket<LiveClient>) {
     if (m.goAway) {
       // Server will drop this connection soon. Finish the current answer, then hop.
       const left = parseSeconds(m.goAway.timeLeft);
-      console.log(`[mochi] gemini goAway (${left}s left)`);
+      console.log(`[cadbury] gemini goAway (${left}s left)`);
       if (!c.generating) return hop(ws, "goAway");
       c.hopAt = Date.now() + Math.max(0, left - 3) * 1000;
       c.hopTimer = setTimeout(() => hop(ws, "goAway deadline"), Math.max(0, left - 3) * 1000);
@@ -163,7 +163,7 @@ function connectUpstream(ws: ServerWebSocket<LiveClient>) {
           } catch (err) {
             response = { error: (err as Error).message };
           }
-          console.log(`[mochi] gemini tool ${f.name}`, JSON.stringify(f.args ?? {}).slice(0, 200));
+          console.log(`[cadbury] gemini tool ${f.name}`, JSON.stringify(f.args ?? {}).slice(0, 200));
           // Gemini wants an object; wrap arrays/primitives.
           if (typeof response !== "object" || Array.isArray(response)) response = { result: response };
           return { id: f.id, name: f.name, response };
@@ -183,7 +183,7 @@ function connectUpstream(ws: ServerWebSocket<LiveClient>) {
 
   up.onclose = (e) => {
     if (up !== c.up || c.closed) return;
-    console.warn(`[mochi] gemini upstream closed: ${e.code} ${e.reason || "(no reason)"}`);
+    console.warn(`[cadbury] gemini upstream closed: ${e.code} ${e.reason || "(no reason)"}`);
     c.ready = false;
     const reason = e.reason ?? "";
     // Free-tier rate limit (per minute): wait it out instead of giving up.
@@ -191,28 +191,28 @@ function connectUpstream(ws: ServerWebSocket<LiveClient>) {
       c.limitTries = (c.limitTries ?? 0) + 1;
       if (c.limitTries <= 5) {
         const wait = Math.min(60, 10 * c.limitTries);
-        console.log(`[mochi] gemini: rate limited, retrying in ${wait}s`);
-        ws.send(JSON.stringify({ mochi: "rate-limited", wait }));
+        console.log(`[cadbury] gemini: rate limited, retrying in ${wait}s`);
+        ws.send(JSON.stringify({ cadbury: "rate-limited", wait }));
         setTimeout(() => !c.closed && connectUpstream(ws), wait * 1000);
         return;
       }
     }
     if (/quota|exhausted|api key|permission denied|billing/i.test(reason)) {
-      ws.send(JSON.stringify({ mochi: "error", message: reason }));
+      ws.send(JSON.stringify({ cadbury: "error", message: reason }));
       ws.close();
       return;
     }
     // Quiet for a while (e.g. muted): don't churn reconnects; resume on the next thing said or sent.
     if (/inactiv|idle/i.test(reason)) {
       c.dormant = true;
-      console.log("[mochi] gemini: idle, will resume on next activity");
+      console.log("[cadbury] gemini: idle, will resume on next activity");
       return;
     }
     // The previous connection (page reload, or another device) still holds this conversation:
     // wait a moment for it to let go, then fall back to a fresh conversation.
     if (/already connected/i.test(reason)) {
       c.alreadyTries = (c.alreadyTries ?? 0) + 1;
-      if (c.alreadyTries > 2) { c.handle = undefined; console.log("[mochi] gemini: conversation busy elsewhere, starting a fresh one"); }
+      if (c.alreadyTries > 2) { c.handle = undefined; console.log("[cadbury] gemini: conversation busy elsewhere, starting a fresh one"); }
       setTimeout(() => !c.closed && connectUpstream(ws), 1200);
       return;
     }
@@ -223,11 +223,11 @@ function connectUpstream(ws: ServerWebSocket<LiveClient>) {
     }
     if (c.retries < MAX_RETRIES) {
       c.retries++;
-      ws.send(JSON.stringify({ mochi: "reconnecting", attempt: c.retries }));
+      ws.send(JSON.stringify({ cadbury: "reconnecting", attempt: c.retries }));
       setTimeout(() => !c.closed && connectUpstream(ws), Math.min(8000, 400 * 2 ** (c.retries - 1)));
       return;
     }
-    ws.send(JSON.stringify({ mochi: "error", message: reason || `Gemini connection closed (${e.code})` }));
+    ws.send(JSON.stringify({ cadbury: "error", message: reason || `Gemini connection closed (${e.code})` }));
     ws.close();
   };
 }
@@ -243,12 +243,12 @@ export const geminiSocket = {
   message(ws: ServerWebSocket<LiveClient>, msg: string | Buffer) {
     const c = ws.data;
     const text = typeof msg === "string" ? msg : msg.toString();
-    if (text === '{"mochi":"ping"}') { ws.send('{"mochi":"pong"}'); return; }
+    if (text === '{"cadbury":"ping"}') { ws.send('{"cadbury":"pong"}'); return; }
     const isAudio = text.includes('"audio"');
     if (c.dormant) {
       // wake only for real speech/text, not silence frames
       c.dormant = false;
-      console.log("[mochi] gemini: waking up");
+      console.log("[cadbury] gemini: waking up");
       connectUpstream(ws);
     }
     if (c.ready && c.up?.readyState === WebSocket.OPEN) c.up.send(text);
@@ -257,7 +257,7 @@ export const geminiSocket = {
   },
   close(ws: ServerWebSocket<LiveClient>, code: number, reason: string) {
     const c = ws.data;
-    console.log(`[mochi] voice page disconnected: ${code} ${reason || ""} after ${Math.round((Date.now() - c.since) / 1000)}s`);
+    console.log(`[cadbury] voice page disconnected: ${code} ${reason || ""} after ${Math.round((Date.now() - c.since) / 1000)}s`);
     c.closed = true;
     clearTimeout(c.hopTimer);
     try { c.up?.close(); } catch {}

@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("mochi", {
+contextBridge.exposeInMainWorld("cadbury", {
   moveBy: (dx, dy) => ipcRenderer.send("move-by", dx, dy),
   panel: (open) => ipcRenderer.send("panel", open),
   menu: (info) => ipcRenderer.send("menu", info),

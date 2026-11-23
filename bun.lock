@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "mochi",
+      "name": "cadbury",
       "devDependencies": {
         "electron": "^44.9.3",
       },

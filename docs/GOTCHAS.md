@@ -3,11 +3,11 @@
 Each of these cost real debugging time. Check here before "simplifying" something that looks odd.
 
 ## Desktop window (Electron on Linux)
-- **Wayland ignores always-on-top for native Wayland windows** (GNOME at least), so Mochi runs Electron under **XWayland**.
+- **Wayland ignores always-on-top for native Wayland windows** (GNOME at least), so Cadbury runs Electron under **XWayland**.
 - **`--ozone-platform=x11` must be on Electron's command line**, along with `ELECTRON_OZONE_PLATFORM_HINT=x11`. Calling `app.commandLine.appendSwitch` from `main.js` is too late: the browser process comes up on Wayland while the GPU and renderer use X11. The window then exists but is never painted. Symptoms: `XGetWindowAttributes failed for window 1` and `capturePage()` → `UnknownVizError`.
-- **Don't call `app.disableHardwareAcceleration()`.** The software output path paints nothing into transparent XWayland windows (an invisible cat). It's opt-in via `MOCHI_SOFTWARE=1`.
+- **Don't call `app.disableHardwareAcceleration()`.** The software output path paints nothing into transparent XWayland windows (an invisible cat). It's opt-in via `CADBURY_SOFTWARE=1`.
 - **Linux transparent windows need a short delay** before creation (`setTimeout(createWindow, 400)`) and `show: false` + `ready-to-show`.
-- **`globalShortcut` doesn't work on Wayland**, because apps can't grab keys. Use an OS shortcut that runs `bin/mochi-talk` (→ `/api/hotkey` → SSE `hotkey`).
+- **`globalShortcut` doesn't work on Wayland**, because apps can't grab keys. Use an OS shortcut that runs `bin/cadbury-talk` (→ `/api/hotkey` → SSE `hotkey`).
 - **Harmless startup noise** to ignore: `Gtk: gtk_widget_get_scale_factor: assertion …`. The launcher passes `--log-level=3`.
 - **The pet size uses `webContents.setZoomFactor`**, so cursor positions (screen px) must be scaled by `zoom` before comparing with page coordinates (`onCursor` in app.js).
 
@@ -23,7 +23,7 @@ Each of these cost real debugging time. Check here before "simplifying" somethin
 
 ## Barge-in (interrupting the cat)
 - **Gemini generates audio much faster than real time.** A whole reply can be queued on the client while Gemini already considers the turn complete, so it never sends `interrupted` and the cat keeps talking over you.
-- **The fix is client-side barge-in** in `voice-gemini.js`: about 200 ms of mic RMS above `MOCHI_BARGE_THRESHOLD` (0.06) while playing → stop all sources, and set `skipTurn` if the turn is still generating, so late chunks of the old reply are dropped. Mic audio keeps flowing so Gemini hears you. Browser echo cancellation keeps the cat's own voice out of the mic.
+- **The fix is client-side barge-in** in `voice-gemini.js`: about 200 ms of mic RMS above `CADBURY_BARGE_THRESHOLD` (0.06) while playing → stop all sources, and set `skipTurn` if the turn is still generating, so late chunks of the old reply are dropped. Mic audio keeps flowing so Gemini hears you. Browser echo cancellation keeps the cat's own voice out of the mic.
 - **`realtimeInputConfig`:** `START_SENSITIVITY_HIGH` (notice interruptions quickly) and `END_SENSITIVITY_LOW` + `silenceDurationMs` 800 (don't jump in during pauses).
 
 ## Voice behaviour (persona in realtime.ts)
@@ -33,7 +33,7 @@ Each of these cost real debugging time. Check here before "simplifying" somethin
 
 ## Claude Code
 - **Hooks come from `--settings <file>`, not the user's settings.json**, so normal `claude` sessions are untouched.
-- **`mochi-hook` must exit 0 fast.** A blocking or failing hook would affect the user's real session.
+- **`cadbury-hook` must exit 0 fast.** A blocking or failing hook would affect the user's real session.
 - **Voice input goes through tmux `send-keys`.** There's no API to inject into an interactive Claude Code session. Use `-l` (literal) and send `Enter` separately; collapse newlines.
 - **Permission prompt keys:** `1` = yes, `2` = yes and don't ask again, Esc = no. If Claude Code changes its prompt UI, update `claudeTools.answer_permission`.
 - **Subscriptions:** don't try to use a Claude subscription in third-party harnesses (Anthropic's terms forbid OAuth reuse). Driving the official `claude` CLI is the supported path.

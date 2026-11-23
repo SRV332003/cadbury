@@ -1,15 +1,15 @@
 {
-  "name": "mochi",
+  "name": "cadbury",
   "version": "0.2.0",
   "private": true,
   "description": "A floating voice pet for Claude Code and opencode: talk to your coding agent, hear what it did.",
   "license": "MIT",
   "main": "desktop/main.js",
   "scripts": {
-    "start": "./bin/mochi",
+    "start": "./bin/cadbury",
     "bridge": "bun bridge/index.ts",
     "desktop": "electron desktop/main.js",
-    "check": "bun build bridge/index.ts --target=bun --outdir=/tmp/mochi-check >/dev/null && node --check desktop/main.js && node --check web/app.js && node --check web/voice.js && node --check web/voice-gemini.js && node --check web/sprite.js && echo ok"
+    "check": "bun build bridge/index.ts --target=bun --outdir=/tmp/cadbury-check >/dev/null && node --check desktop/main.js && node --check web/app.js && node --check web/voice.js && node --check web/voice-gemini.js && node --check web/sprite.js && echo ok"
   },
   "devDependencies": {
     "electron": "^44.9.3"

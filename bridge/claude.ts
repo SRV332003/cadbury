@@ -12,7 +12,7 @@ function tmux(...args: string[]) {
   return r.stdout.toString();
 }
 function target() {
-  if (!state.tmuxTarget) throw new Error("Claude Code isn't running inside mochi's tmux pane — start it with `mochi`.");
+  if (!state.tmuxTarget) throw new Error("Claude Code isn't running inside cadbury's tmux pane — start it with `cadbury`.");
   return state.tmuxTarget;
 }
 async function typeLine(text: string) {
@@ -241,6 +241,6 @@ export const claudeTools: Record<string, ToolFn> = {
     return { ok: true, note: "Opened Claude Code's session picker in the terminal; the user picks one there." };
   },
   async switch_project({ name }) {
-    return { ok: false, reason: `Claude Code is tied to its folder. To work on "${name}", run \`mochi\` in that project's folder.` };
+    return { ok: false, reason: `Claude Code is tied to its folder. To work on "${name}", run \`cadbury\` in that project's folder.` };
   },
 };

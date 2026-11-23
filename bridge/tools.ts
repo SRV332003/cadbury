@@ -37,7 +37,7 @@ export async function showInTui(sessionID: string) {
 
 async function ensureSession(): Promise<string> {
   if (state.sessionID) return state.sessionID;
-  const s = await oc<any>("POST", "/session", { directory: state.directory, body: { title: "Mochi voice session" } });
+  const s = await oc<any>("POST", "/session", { directory: state.directory, body: { title: "Cadbury voice session" } });
   setContext(state.directory, s.id, s.title);
   showInTui(s.id);
   return s.id;
@@ -200,7 +200,7 @@ export const tools: Record<string, ToolFn> = {
   },
 
   async new_session() {
-    const s = await oc<any>("POST", "/session", { directory: state.directory, body: { title: "Mochi voice session" } });
+    const s = await oc<any>("POST", "/session", { directory: state.directory, body: { title: "Cadbury voice session" } });
     setContext(state.directory, s.id, s.title);
     state.busy = false;
     showInTui(s.id);

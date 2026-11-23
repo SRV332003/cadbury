@@ -35,7 +35,7 @@ export const state = {
   lastActivityAt: Date.now(),
   lastNarrateAt: 0,
   hadError: false,
-  harness: (process.env.MOCHI_HARNESS === "opencode" ? "opencode" : "claude") as "opencode" | "claude",
+  harness: (process.env.CADBURY_HARNESS === "opencode" ? "opencode" : "claude") as "opencode" | "claude",
   tmuxTarget: undefined as string | undefined,
   tmuxSocket: undefined as string | undefined,
   language: undefined as string | undefined,
@@ -65,15 +65,20 @@ export function pushActivity(text: string) {
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
-const PREFS = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "mochi", "prefs.json");
-export function loadPrefs(): any { try { return JSON.parse(readFileSync(PREFS, "utf8")); } catch { return {}; } }
+const CONFIG = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
+const PREFS = join(CONFIG, "cadbury", "prefs.json");
+const LEGACY_PREFS = join(CONFIG, "mochi", "prefs.json"); // before the rename; read until the first save writes PREFS
+export function loadPrefs(): any {
+  for (const f of [PREFS, LEGACY_PREFS]) { try { return JSON.parse(readFileSync(f, "utf8")); } catch {} }
+  return {};
+}
 export function savePref(key: string, value: unknown) {
   try { mkdirSync(dirname(PREFS), { recursive: true }); writeFileSync(PREFS, JSON.stringify({ ...loadPrefs(), [key]: value }, null, 2)); } catch {}
 }
 
 export function describeLanguage(l: string) {
   return /^hinglish$/i.test(l)
-    ? "Hinglish (casual Hindi-English mix the way Indian developers talk, e.g. 'maine login page add kar diya, ab tests run kar raha hoon'; keep technical terms in English)"
+    ? "Hinglish (casual, conversational Hindi-English mix the way Indian developer friends talk on a call, e.g. 'maine login page add kar diya, ab tests run karte hain'; use everyday words like acha, haan, chalo, bas, arre; keep technical terms in English; never switch to pure or formal Hindi)"
     : l;
 }
 
@@ -147,7 +152,7 @@ async function finishTask(sessionID: string, directory: string) {
         }
       }
     }
-  } catch (e) { console.warn("[mochi] fetch messages failed", e); }
+  } catch (e) { console.warn("[cadbury] fetch messages failed", e); }
   try {
     files = await oc<DiffFile[]>("GET", `/session/${sessionID}/diff`, { directory });
   } catch {}
@@ -286,8 +291,8 @@ setInterval(() => {
   if (!state.busy && state.mood === "idle" && Date.now() - state.lastActivityAt > 5 * 60_000) setMood("sleeping", "zzz…");
 }, 15_000);
 
-// Default: MOCHI_LANGUAGE, else match the user. A saved voice choice wins ("auto" is saved as null).
+// Default: CADBURY_LANGUAGE, else Hinglish (CADBURY_LANGUAGE= empty → match the user). A saved voice choice wins ("auto" is saved as null).
 {
   const prefs = loadPrefs();
-  state.language = "language" in prefs ? prefs.language || undefined : process.env.MOCHI_LANGUAGE || undefined;
+  state.language = "language" in prefs ? prefs.language || undefined : (process.env.CADBURY_LANGUAGE ?? "Hinglish") || undefined;
 }

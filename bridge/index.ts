@@ -1,4 +1,5 @@
-// Mochi bridge: serves the cat UI, relays opencode activity, runs voice tools.
+// Cadbury bridge: serves the cat UI, relays opencode activity, runs voice tools.
+import "./env"; // must stay first: maps legacy MOCHI_* settings before other modules read process.env
 import { join, normalize } from "node:path";
 import { ensureOpencode, streamEvents, OC_URL } from "./opencode";
 import { handleEvent, state, subscribe, setContext, emit, type UiEvent } from "./state";
@@ -9,7 +10,7 @@ import { handleHook } from "./claude";
 
 const VOICE_PROVIDER = (process.env.VOICE_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
 
-const PORT = Number(process.env.MOCHI_PORT ?? 8787);
+const PORT = Number(process.env.CADBURY_PORT ?? 8787);
 const WEB = join(import.meta.dir, "..", "web");
 const ALLOWED = process.env.ALLOWED_TS_USER?.trim();
 
@@ -54,10 +55,10 @@ Bun.serve({
     if (path === "/voice-config.js") {
       const cfg = {
         provider: VOICE_PROVIDER,
-        halfDuplex: !!process.env.MOCHI_HALF_DUPLEX,
-        bargeThreshold: process.env.MOCHI_BARGE_THRESHOLD ? Number(process.env.MOCHI_BARGE_THRESHOLD) : undefined,
+        halfDuplex: !!process.env.CADBURY_HALF_DUPLEX,
+        bargeThreshold: process.env.CADBURY_BARGE_THRESHOLD ? Number(process.env.CADBURY_BARGE_THRESHOLD) : undefined,
       };
-      return new Response(`window.MOCHI_VOICE = ${JSON.stringify(cfg)};`, { headers: { "content-type": "text/javascript", "cache-control": "no-store" } });
+      return new Response(`window.CADBURY_VOICE = ${JSON.stringify(cfg)};`, { headers: { "content-type": "text/javascript", "cache-control": "no-store" } });
     }
 
     if (path === "/api/health") return json({ ok: true, opencode: OC_URL });
@@ -69,7 +70,7 @@ Bun.serve({
       });
     }
 
-    // `mochi` launcher: set the working folder for a new terminal session
+    // `cadbury` launcher: set the working folder for a new terminal session
     if (path === "/api/context" && req.method === "POST") {
       const { directory, harness, tmux, tmuxSocket } = await req.json().catch(() => ({}));
       if (harness === "claude" || harness === "opencode") state.harness = harness;
@@ -77,19 +78,19 @@ Bun.serve({
       state.tmuxSocket = tmuxSocket || undefined;
       if (directory) { setContext(directory); state.busy = false; }
       if (state.harness === "opencode") await startOpencode();
-      console.log(`[mochi] following ${state.harness} in ${state.directory}${state.tmuxTarget ? ` (tmux ${state.tmuxTarget})` : ""}`);
+      console.log(`[cadbury] following ${state.harness} in ${state.directory}${state.tmuxTarget ? ` (tmux ${state.tmuxTarget})` : ""}`);
       return json({ ok: true, directory: state.directory, harness: state.harness });
     }
 
-    // Claude Code hooks (bin/mochi-hook <Event> posts the hook JSON here)
+    // Claude Code hooks (bin/cadbury-hook <Event> posts the hook JSON here)
     if (path === "/api/claude-hook" && req.method === "POST") {
       const event = url.searchParams.get("event") ?? "";
       const payload = await req.json().catch(() => ({}));
-      try { handleHook(event, payload); } catch (e) { console.warn("[mochi] hook error", e); }
+      try { handleHook(event, payload); } catch (e) { console.warn("[cadbury] hook error", e); }
       return json({});
     }
 
-    // Global hotkey (GNOME custom shortcut → bin/mochi-talk → here → cat toggles mic)
+    // Global hotkey (GNOME custom shortcut → bin/cadbury-talk → here → cat toggles mic)
     if (path === "/api/hotkey" && req.method === "POST") {
       emit({ type: "hotkey" } as any);
       return json({ ok: true });
@@ -105,10 +106,10 @@ Bun.serve({
       const args = await req.json().catch(() => ({}));
       try {
         const result = await runTool(name, args);
-        console.log(`[mochi] tool ${name}`, JSON.stringify(args).slice(0, 200));
+        console.log(`[cadbury] tool ${name}`, JSON.stringify(args).slice(0, 200));
         return json(result ?? { ok: true });
       } catch (e) {
-        console.warn(`[mochi] tool ${name} failed`, e);
+        console.warn(`[cadbury] tool ${name} failed`, e);
         return json({ error: (e as Error).message });
       }
     }
@@ -142,6 +143,6 @@ Bun.serve({
   },
 });
 
-console.log(`[mochi] voice: ${VOICE_PROVIDER === "gemini" ? `Gemini Live (${GEMINI_MODEL})` : "OpenAI Realtime"}`);
-console.log(`[mochi] bridge on http://127.0.0.1:${PORT}  (opencode at ${OC_URL})`);
-console.log(`[mochi] attach the TUI with:  opencode attach ${OC_URL} --dir <project>`);
+console.log(`[cadbury] voice: ${VOICE_PROVIDER === "gemini" ? `Gemini Live (${GEMINI_MODEL})` : "OpenAI Realtime"}`);
+console.log(`[cadbury] bridge on http://127.0.0.1:${PORT}  (opencode at ${OC_URL})`);
+console.log(`[cadbury] attach the TUI with:  opencode attach ${OC_URL} --dir <project>`);

@@ -65,7 +65,7 @@ class GeminiVoice extends EventTarget {
       const proto = location.protocol === "https:" ? "wss" : "ws";
       const ws = (this.ws = new WebSocket(`${proto}://${location.host}/api/gemini-live`));
       this.wanted = true; // stays true until the user hangs up
-      ws.onopen = () => { this.ping = setInterval(() => ws.readyState === WebSocket.OPEN && ws.send('{"mochi":"ping"}'), 15000); };
+      ws.onopen = () => { this.ping = setInterval(() => ws.readyState === WebSocket.OPEN && ws.send('{"cadbury":"ping"}'), 15000); };
       ws.onmessage = (e) => this.onServer(JSON.parse(e.data));
       ws.onclose = (e) => {
         console.warn("voice socket closed", e.code, e.reason);
@@ -134,8 +134,8 @@ class GeminiVoice extends EventTarget {
   }
 
   onServer(m) {
-    if (m.mochi === "pong") return;
-    if (m.mochi === "ready") {
+    if (m.cadbury === "pong") return;
+    if (m.cadbury === "ready") {
       const quiet = m.resumed && this.everLive; // silent resume after a reconnect
       this.everLive = true;
       this.responding = false;
@@ -144,9 +144,9 @@ class GeminiVoice extends EventTarget {
       this.flush();
       return;
     }
-    if (m.mochi === "rate-limited") { this.stopPlayback(); this.responding = false; this.emit("rate-limited", m.wait); return; }
-    if (m.mochi === "reconnecting") { this.stopPlayback(); this.responding = false; this.emit("reconnecting", m.attempt); return; }
-    if (m.mochi === "error") { this.fatal = /quota|exhausted|api key|permission|billing|not set/i.test(m.message || ""); this.emit("error", m.message); return; }
+    if (m.cadbury === "rate-limited") { this.stopPlayback(); this.responding = false; this.emit("rate-limited", m.wait); return; }
+    if (m.cadbury === "reconnecting") { this.stopPlayback(); this.responding = false; this.emit("reconnecting", m.attempt); return; }
+    if (m.cadbury === "error") { this.fatal = /quota|exhausted|api key|permission|billing|not set/i.test(m.message || ""); this.emit("error", m.message); return; }
     if (m.toolCall) {
       this.responding = true;
       for (const f of m.toolCall.functionCalls ?? []) this.emit("tool", { name: f.name, args: f.args ?? {} });

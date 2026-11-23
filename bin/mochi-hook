@@ -1,5 +1,5 @@
 #!/bin/sh
-# Claude Code hook → Mochi bridge. Never blocks or fails Claude: always exits 0, prints nothing.
+# Legacy name of cadbury-hook, kept for Claude sessions started before the rename. Same rules: never block, always exit 0.
 curl -s --max-time 2 -X POST -H 'content-type: application/json' --data-binary @- \
-  "http://127.0.0.1:${MOCHI_PORT:-8787}/api/claude-hook?event=$1" >/dev/null 2>&1
+  "http://127.0.0.1:${CADBURY_PORT:-${MOCHI_PORT:-8787}}/api/claude-hook?event=$1" >/dev/null 2>&1
 exit 0

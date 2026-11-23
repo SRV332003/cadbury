@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Toggle Cadbury's mic (bind this to a keyboard shortcut).
+curl -s -XPOST "http://127.0.0.1:${CADBURY_PORT:-${MOCHI_PORT:-8787}}/api/hotkey" >/dev/null

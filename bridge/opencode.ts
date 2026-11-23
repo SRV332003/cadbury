@@ -44,7 +44,7 @@ export async function ocHealthy(): Promise<boolean> {
 /** Start `opencode serve` if nothing is listening on OC_PORT. */
 export async function ensureOpencode(cwd: string) {
   if (await ocHealthy()) return;
-  console.log(`[mochi] starting opencode serve on :${OC_PORT} (cwd ${cwd})`);
+  console.log(`[cadbury] starting opencode serve on :${OC_PORT} (cwd ${cwd})`);
   spawn(["opencode", "serve", "--port", String(OC_PORT), "--hostname", "127.0.0.1"], {
     cwd,
     stdout: "ignore",
@@ -87,12 +87,12 @@ export async function streamEvents(onEvent: (directory: string | undefined, ev: 
             const ev = raw?.payload?.type ? raw.payload : raw;
             onEvent(raw?.directory, ev);
           } catch (e) {
-            console.warn("[mochi] bad event", e);
+            console.warn("[cadbury] bad event", e);
           }
         }
       }
     } catch (e) {
-      if (!warned) console.warn("[mochi] opencode event stream dropped:", (e as Error).message);
+      if (!warned) console.warn("[cadbury] opencode event stream dropped:", (e as Error).message);
       warned = true;
     }
     await Bun.sleep(1000);

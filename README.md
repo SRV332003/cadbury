@@ -1,10 +1,10 @@
-# 🐱 Mochi
+# 🐱 Cadbury
 
-**A floating voice pet for your coding agent.** Run `mochi` in a project: your coding agent ([Claude Code](https://claude.com/claude-code) or [opencode](https://opencode.ai)) opens in the terminal, and a little cat pops up on your desktop. Talk to the cat and it drives the agent. The cat shows what the agent is doing, asks you out loud when the agent needs a decision, and tells you what changed when it's done.
+**A floating voice pet for your coding agent.** Run `cadbury` in a project: your coding agent ([Claude Code](https://claude.com/claude-code) or [opencode](https://opencode.ai)) opens in the terminal, and a little cat pops up on your desktop. Talk to the cat and it drives the agent. The cat shows what the agent is doing, asks you out loud when the agent needs a decision, and tells you what changed when it's done.
 
 ```
 ┌──────────── terminal ────────────┐        ┌───── desktop ─────┐
-│ $ mochi                          │        │   "Done! I added  │
+│ $ cadbury                          │        │   "Done! I added  │
 │ ╭─ Claude Code ───────────────╮  │  ◄──►  │    the login page │
 │ │ > add a login page          │  │  voice │    and 2 tests."  │
 │ │ ● Editing src/login.tsx …   │  │        │        🐱         │
@@ -15,7 +15,7 @@
 - 🎙 **Hands-free voice.** You can interrupt it mid-sentence. It answers in your language and keeps it (say "talk to me in Hindi" and it sticks).
 - 🛠 **Real harness power.** Everything goes through your actual Claude Code or opencode session: same tools, MCP servers, permissions and `CLAUDE.md`/`AGENTS.md`. Typing in the terminal works as usual, and the cat narrates that too.
 - 🐾 **A pet with moods.** Idle, listening, talking, thinking, working, asking, happy, oops, sleeping, plus random antics (zoomies, flops, begging…). Its head follows your mouse, and hovering over it counts as petting.
-- 🔐 **Uses your Claude subscription legitimately.** Mochi drives the official `claude` CLI; it never touches your credentials.
+- 🔐 **Uses your Claude subscription legitimately.** Cadbury drives the official `claude` CLI; it never touches your credentials.
 - 💸 **Free voice option.** Gemini Live has a free tier. OpenAI Realtime is also supported.
 - 📱 **Optional phone remote** over Tailscale.
 
@@ -33,9 +33,9 @@ Electron is installed automatically, or uses a system `electron` if you have one
 ## Install
 
 ```bash
-git clone https://github.com/thekamalkashyap/cadbury.git mochi
-cd mochi
-./install.sh            # checks requirements, installs Electron, creates .env, links ~/.local/bin/mochi
+git clone https://github.com/thekamalkashyap/cadbury.git cadbury
+cd cadbury
+./install.sh            # checks requirements, installs Electron, creates .env, links ~/.local/bin/cadbury
 $EDITOR .env            # set GEMINI_API_KEY (or VOICE_PROVIDER=openai + OPENAI_API_KEY)
 ```
 
@@ -43,9 +43,9 @@ $EDITOR .env            # set GEMINI_API_KEY (or VOICE_PROVIDER=openai + OPENAI_
 
 ```bash
 cd ~/code/my-app
-mochi                   # Claude Code + the cat
-mochi --opencode        # opencode + the cat
-mochi path/to/project   # start in another folder; extra args go to claude, e.g. `mochi --continue`
+cadbury                   # Claude Code + the cat
+cadbury --opencode        # opencode + the cat
+cadbury path/to/project   # start in another folder; extra args go to claude, e.g. `cadbury --continue`
 ```
 
 | Do this | What happens |
@@ -61,12 +61,15 @@ Things to say: *"add a dark-mode toggle to settings"*, *"why is the login test f
 The cat asks a clarifying question only when it really matters: a vague goal ("make it faster") or something destructive (deleting data, force-pushing). Clear requests and "why…" questions go straight to the agent.
 
 ### How it works with Claude Code
-`mochi` starts the real `claude` CLI inside a private tmux session (`tmux -L mochi`, status bar hidden, so it looks like a normal terminal). [Hooks](https://docs.claude.com/en/docs/claude-code/hooks), passed only to this session with `--settings`, tell the cat what Claude is doing. When you speak, the cat types into Claude. Permission answers are `1`, `2` or Esc, and "stop" is Esc. Your other `claude` sessions are untouched. If you're already inside tmux, Mochi uses your current pane.
-Detach with `Ctrl-b d`; reattach with `tmux -L mochi attach`.
+`cadbury` starts the real `claude` CLI inside a private tmux session (`tmux -L cadbury`, status bar hidden, so it looks like a normal terminal). [Hooks](https://docs.claude.com/en/docs/claude-code/hooks), passed only to this session with `--settings`, tell the cat what Claude is doing. When you speak, the cat types into Claude. Permission answers are `1`, `2` or Esc, and "stop" is Esc. Your other `claude` sessions are untouched. If you're already inside tmux, Cadbury uses your current pane.
+Detach with `Ctrl-b d`; reattach with `tmux -L cadbury attach`.
+
+### Upgrading from Mochi
+Cadbury used to be called Mochi. Old setups keep working: `mochi`, `bin/mochi-talk` and `bin/mochi-hook` still exist and run the Cadbury versions, `MOCHI_*` settings in `.env` are used when the matching `CADBURY_*` one isn't set, and `~/.config/mochi/prefs.json` is read until Cadbury saves its own `~/.config/cadbury/prefs.json`. Claude sessions you left running before the upgrade are on the old tmux server: `tmux -L mochi attach`.
 
 ### Global "talk" hotkey
-- **X11 and macOS:** `Ctrl+Alt+Space` works out of the box. Change it with `MOCHI_HOTKEY`.
-- **Wayland** (apps can't grab global keys): bind a system shortcut to `<mochi folder>/bin/mochi-talk`. On GNOME that's Settings → Keyboard → Custom Shortcuts.
+- **X11 and macOS:** `Ctrl+Alt+Space` works out of the box. Change it with `CADBURY_HOTKEY`.
+- **Wayland** (apps can't grab global keys): bind a system shortcut to `<cadbury folder>/bin/cadbury-talk`. On GNOME that's Settings → Keyboard → Custom Shortcuts.
 
 ### Phone remote (optional)
 ```bash
@@ -82,31 +85,31 @@ All settings live in `.env`; see [`.env.example`](.env.example) for the full lis
 |---|---|---|
 | `VOICE_PROVIDER` | `gemini` | `gemini` or `openai` |
 | `GEMINI_VOICE` / `REALTIME_VOICE` | `Leda` / `marin` | voice of the cat |
-| `MOCHI_HARNESS` | `claude` | default agent |
-| `MOCHI_LANGUAGE` | `Hinglish` in `.env.example` (empty = match you) | e.g. `Hinglish`, `Hindi`, `English`, `Spanish` |
-| `MOCHI_SCALE` | `1` | pet size (also right-click → Size) |
-| `MOCHI_BARGE_THRESHOLD` | `0.06` | lower = easier to interrupt the cat |
-| `MOCHI_SILENCE_MS` | `800` | pause length before the cat answers |
-| `MOCHI_HALF_DUPLEX` | off | set `1` if the cat hears its own voice |
+| `CADBURY_HARNESS` | `claude` | default agent |
+| `CADBURY_LANGUAGE` | `Hinglish` (empty = match you) | e.g. `Hinglish`, `Hindi`, `English`, `Spanish` |
+| `CADBURY_SCALE` | `1` | pet size (also right-click → Size) |
+| `CADBURY_BARGE_THRESHOLD` | `0.06` | lower = easier to interrupt the cat |
+| `CADBURY_SILENCE_MS` | `800` | pause length before the cat answers |
+| `CADBURY_HALF_DUPLEX` | off | set `1` if the cat hears its own voice |
 
-Your choices for size and language are remembered in `~/.config/mochi/prefs.json`.
+Your choices for size and language are remembered in `~/.config/cadbury/prefs.json`.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| Cat doesn't appear | `MOCHI_DEBUG=1 mochi`, then check `~/.cache/mochi/pet.log` and `~/.cache/mochi/cat-shot.png`. Try `MOCHI_OPAQUE=1` if your compositor lacks transparency. |
-| Not always on top (Wayland) | Mochi already runs under XWayland for this. Make sure XWayland is installed. |
-| "GEMINI_API_KEY is not set" | add it to `.env` and restart `mochi` |
+| Cat doesn't appear | `CADBURY_DEBUG=1 cadbury`, then check `~/.cache/cadbury/pet.log` and `~/.cache/cadbury/cat-shot.png`. Try `CADBURY_OPAQUE=1` if your compositor lacks transparency. |
+| Not always on top (Wayland) | Cadbury already runs under XWayland for this. Make sure XWayland is installed. |
+| "GEMINI_API_KEY is not set" | add it to `.env` and restart `cadbury` |
 | "Gemini free limit hit" | the free tier is rate-limited per minute; it retries by itself |
-| Cat talks over you, or cuts itself off | tune `MOCHI_BARGE_THRESHOLD` (lower or higher), use a headset, or set `MOCHI_HALF_DUPLEX=1` |
-| Cat jumps in while you pause | raise `MOCHI_SILENCE_MS` (e.g. `1200`) |
-| Voice doesn't reach Claude | Claude Code mode needs tmux; run `mochi`, not plain `claude` |
+| Cat talks over you, or cuts itself off | tune `CADBURY_BARGE_THRESHOLD` (lower or higher), use a headset, or set `CADBURY_HALF_DUPLEX=1` |
+| Cat jumps in while you pause | raise `CADBURY_SILENCE_MS` (e.g. `1200`) |
+| Voice doesn't reach Claude | Claude Code mode needs tmux; run `cadbury`, not plain `claude` |
 
 ## Privacy
 - **API keys** stay in `.env` on your machine. The page only gets short-lived tokens (OpenAI), or talks to a local proxy that holds the key (Gemini).
 - **Your voice** goes to the voice provider you chose. On Google's free tier, it may be used to improve their models.
-- **Code** is only touched by your coding agent, the same as without Mochi.
+- **Code** is only touched by your coding agent, the same as without Cadbury.
 
 ## Contributing / hacking
 Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/), written for humans and AI coding agents alike: architecture, protocols, gotchas, and how to test without a screen.

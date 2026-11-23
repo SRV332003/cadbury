@@ -12,19 +12,19 @@
                          │  state · narrator · tools · gemini proxy         │
                          └──────┬───────────────────────────────┬───────────┘
             Claude Code mode    │                               │   opencode mode
-   hooks: bin/mochi-hook ──POST─┤                               ├── HTTP + SSE /global/event
+   hooks: bin/cadbury-hook ──POST─┤                               ├── HTTP + SSE /global/event
    voice: tmux send-keys ───────┘                               └── opencode serve :4096
                 ▼                                                        ▲
-   claude (TUI) in `tmux -L mochi` pane  ◄── user types here too    opencode attach (TUI)
+   claude (TUI) in `tmux -L cadbury` pane  ◄── user types here too    opencode attach (TUI)
 ```
 
 ## Components
 
-**`bin/mochi` (launcher)**
-1. Loads `.env`, picks the harness (`MOCHI_HARNESS`, `--opencode`, `--claude`) and folder.
-2. If the bridge isn't answering on `MOCHI_PORT`, it starts Electron in its own process group (under XWayland on Linux). Electron then starts the bridge.
-3. Writes `~/.cache/mochi/claude-hooks.json`, which wires every hook event to `bin/mochi-hook <Event>`.
-4. **Claude:** creates a detached session on a private tmux server, `tmux -L mochi new-session … claude --settings <hooks>`, and registers the pane with `POST /api/context {directory, harness, tmux, tmuxSocket}`. Then it attaches. Inside an existing tmux it uses `$TMUX_PANE` instead.
+**`bin/cadbury` (launcher)**
+1. Loads `.env`, picks the harness (`CADBURY_HARNESS`, `--opencode`, `--claude`) and folder.
+2. If the bridge isn't answering on `CADBURY_PORT`, it starts Electron in its own process group (under XWayland on Linux). Electron then starts the bridge.
+3. Writes `~/.cache/cadbury/claude-hooks.json`, which wires every hook event to `bin/cadbury-hook <Event>`.
+4. **Claude:** creates a detached session on a private tmux server, `tmux -L cadbury new-session … claude --settings <hooks>`, and registers the pane with `POST /api/context {directory, harness, tmux, tmuxSocket}`. Then it attaches. Inside an existing tmux it uses `$TMUX_PANE` instead.
 5. **opencode:** registers, then runs `opencode attach http://127.0.0.1:4096 --dir …`.
 6. When the TUI exits, it kills the pet's process group, but only if this launcher started the pet.
 
@@ -40,12 +40,12 @@
 - executes **voice tools** for both providers;
 - proxies Gemini Live.
 
-**Web page (`web/`)**: renders the pet (`sprite.js`), shows the bubble and panel, runs the voice client, and handles interaction. With no `window.mochi` preload, as in a phone browser at `/remote`, it switches to a full-screen remote layout.
+**Web page (`web/`)**: renders the pet (`sprite.js`), shows the bubble and panel, runs the voice client, and handles interaction. With no `window.cadbury` preload, as in a phone browser at `/remote`, it switches to a full-screen remote layout.
 
 ## Lifecycle of one spoken request (Claude Code + Gemini)
 1. You speak. `voice-gemini.js` captures 16 kHz PCM (AudioWorklet) and sends `realtimeInput.audio` over WS to the bridge, which forwards it to Gemini.
 2. Gemini decides to call `code_task({instruction})`. The bridge runs `runTool()`, which calls `claudeTools.code_task`, which runs `tmux send-keys -l <text>` then `Enter` in Claude's pane.
-3. Claude Code fires `UserPromptSubmit` → `mochi-hook` → `/api/claude-hook`. The bridge sets `busy` and mood `thinking`.
+3. Claude Code fires `UserPromptSubmit` → `cadbury-hook` → `/api/claude-hook`. The bridge sets `busy` and mood `thinking`.
 4. `PreToolUse` sets mood `working` with a status like "editing login.tsx", plus a throttled progress narration (at most one every 25 s).
 5. `PermissionRequest` / `Notification(permission_prompt)` sets mood `asking` and an **urgent** narration: "[system] Claude Code needs permission… ask the user". The cat asks you; your answer becomes `answer_permission`, which sends `1` (once), `2` (always) or Esc (+ your correction).
 6. `Stop`: the bridge reads `last_assistant_message` (falling back to the transcript JSONL) plus `git diff` → mood `happy`, a diff event to the panel, and an urgent narration "[system] Claude Code finished… final message…".
@@ -54,7 +54,7 @@
 opencode mode is the same, except steps 2–6 use opencode's HTTP API (`prompt_async`, `/permission/:id/reply`, `/question/:id/reply`, `/session/:id/abort`, `/session/:id/diff`) and its `/global/event` SSE stream instead of hooks and tmux.
 
 ## State the bridge keeps (state.ts)
-`harness`, `directory`, `sessionID`, `busy`, `mood` / `status`, `currentTool`, `todos`, `activity[]` (last 30), `lastText`, `pendingPermission`, `pendingQuestion`, `language`, `tmuxTarget` / `tmuxSocket`, `transcriptPath`, `hadError`. It all lives in memory; only `scale` and `language` persist (`~/.config/mochi/prefs.json`).
+`harness`, `directory`, `sessionID`, `busy`, `mood` / `status`, `currentTool`, `todos`, `activity[]` (last 30), `lastText`, `pendingPermission`, `pendingQuestion`, `language`, `tmuxTarget` / `tmuxSocket`, `transcriptPath`, `hadError`. It all lives in memory; only `scale` and `language` persist (`~/.config/cadbury/prefs.json`).
 
 ## Voice providers
 - **Gemini Live (default):** the page talks WS to the bridge, which talks WS to Gemini. The bridge sends `setup` (model, voice, persona, tools, VAD config, transcription, context compression, session resumption), runs tool calls itself, and handles `goAway`, inactivity, resumption, "already connected" and rate limits (see GOTCHAS).

@@ -5,7 +5,7 @@ Use a **separate test bridge on port 8799**, never the user's live one on 8787. 
 ```bash
 S=$(mktemp -d)                       # scratch
 mkdir -p $S/proj $S/cfg
-XDG_CONFIG_HOME=$S/cfg MOCHI_PORT=8799 MOCHI_HARNESS=claude DEFAULT_PROJECT=$S/proj \
+XDG_CONFIG_HOME=$S/cfg CADBURY_PORT=8799 CADBURY_HARNESS=claude DEFAULT_PROJECT=$S/proj \
   bun bridge/index.ts > $S/bridge.log 2>&1 &
 until curl -s localhost:8799/api/health >/dev/null; do sleep 0.3; done
 # …tests…
@@ -24,11 +24,11 @@ timeout 20 curl -sN localhost:8799/api/events     # watch mood / narrate / diff 
 
 ## 2. Claude Code mode with simulated hooks and a fake Claude pane
 ```bash
-PANE=$(tmux -L mochitest new-session -d -s t -x 120 -y 30 -P -F '#{pane_id}' "cat > $S/typed.txt")
-SOCK=$(tmux -L mochitest display -p '#{socket_path}')
+PANE=$(tmux -L cadburytest new-session -d -s t -x 120 -y 30 -P -F '#{pane_id}' "cat > $S/typed.txt")
+SOCK=$(tmux -L cadburytest display -p '#{socket_path}')
 curl -s -XPOST localhost:8799/api/context -H 'content-type: application/json' \
   -d "{\"directory\":\"$S/proj\",\"harness\":\"claude\",\"tmux\":\"$PANE\",\"tmuxSocket\":\"$SOCK\"}"
-H() { echo "$2" | MOCHI_PORT=8799 bin/mochi-hook $1; }
+H() { echo "$2" | CADBURY_PORT=8799 bin/cadbury-hook $1; }
 B="\"session_id\":\"s1\",\"cwd\":\"$S/proj\""
 H UserPromptSubmit "{$B,\"prompt\":\"add hello\"}"
 H PreToolUse        "{$B,\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$S/proj/hello.sh\"}}"
@@ -37,7 +37,7 @@ curl -s -XPOST localhost:8799/api/tool/answer_permission -d '{"reply":"once"}'
 H Stop              "{$B,\"last_assistant_message\":\"Created hello.sh.\"}"
 curl -s -XPOST localhost:8799/api/tool/code_task -d '{"instruction":"now print the date"}'
 cat -A $S/typed.txt        # expect: 1now print the date$
-tmux -L mochitest kill-server
+tmux -L cadburytest kill-server
 ```
 To check real hook payloads: run `claude -p "…" --settings hooks.json` with hooks that append stdin to a file (cheap prompt, uses the user's plan).
 
@@ -48,7 +48,7 @@ const ws = new WebSocket("ws://127.0.0.1:8799/api/gemini-live");
 let said = "";
 ws.onmessage = (e) => {
   const m = JSON.parse(e.data);
-  if (m.mochi === "ready") ws.send(JSON.stringify({ realtimeInput: { text: "What is the agent doing? Use your tool." } }));
+  if (m.cadbury === "ready") ws.send(JSON.stringify({ realtimeInput: { text: "What is the agent doing? Use your tool." } }));
   if (m.toolCall) console.log("tool", m.toolCall.functionCalls.map((f) => f.name));
   if (m.serverContent?.outputTranscription?.text) said += m.serverContent.outputTranscription.text;
   if (m.serverContent?.turnComplete && said) { console.log(said); process.exit(0); }
@@ -78,5 +78,5 @@ For a grid, make an HTML page of iframes, one per state. Without the Electron pr
 
 ## 6. Real desktop run (needs a display)
 ```bash
-MOCHI_DEBUG=1 bin/mochi        # ~/.cache/mochi/pet.log + cat-shot.png (what the window actually rendered)
+CADBURY_DEBUG=1 bin/cadbury        # ~/.cache/cadbury/pet.log + cat-shot.png (what the window actually rendered)
 ```

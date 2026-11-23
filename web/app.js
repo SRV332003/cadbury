@@ -1,9 +1,9 @@
 // Glue: bridge events -> cat mood + bubble; voice events -> mood overlay; desktop/remote UI.
 const $ = (s) => document.querySelector(s);
-const isRemote = location.pathname.startsWith("/remote") || !window.mochi;
+const isRemote = location.pathname.startsWith("/remote") || !window.cadbury;
 if (isRemote) document.body.classList.add("remote");
 
-const voice = window.MOCHI_VOICE?.provider === "gemini" ? new GeminiVoice(window.MOCHI_VOICE) : new Voice();
+const voice = window.CADBURY_VOICE?.provider === "gemini" ? new GeminiVoice(window.CADBURY_VOICE) : new Voice();
 let bridgeMood = "idle", bridgeStatus = "";
 let overlay = null; // "listening" | "talking" | null
 let bubbleTimer;
@@ -50,7 +50,7 @@ function showDiff(files) {
     d.appendChild(det);
   }
 }
-function openPanel(open = true) { $("#panel").classList.toggle("hidden", !open); window.mochi?.panel(open); }
+function openPanel(open = true) { $("#panel").classList.toggle("hidden", !open); window.cadbury?.panel(open); }
 
 // ---------- bridge event stream ----------
 function connectBridge() {
@@ -79,7 +79,7 @@ function connectBridge() {
           const plain = e.text.replace(/^\[system\][^\n]*\n?/, "").split("\n").find((l) => l.trim()) ?? e.text;
           bubble(plain.slice(0, 220), 0);
           feed("cat", "🐱 " + plain.slice(0, 400));
-          window.mochi?.notify(plain.slice(0, 200));
+          window.cadbury?.notify(plain.slice(0, 200));
         }
         break;
       }
@@ -137,7 +137,7 @@ wrap.addEventListener("pointermove", (e) => {
   const dx = e.screenX - drag.x, dy = e.screenY - drag.y;
   if (!drag.moved && Math.hypot(dx, dy) < 4) return;
   drag.moved = true;
-  if (window.mochi) { window.mochi.moveBy(dx, dy); drag.x = e.screenX; drag.y = e.screenY; }
+  if (window.cadbury) { window.cadbury.moveBy(dx, dy); drag.x = e.screenX; drag.y = e.screenY; }
 });
 wrap.addEventListener("pointerup", () => {
   if (drag && !drag.moved) talkToggle();
@@ -146,11 +146,11 @@ wrap.addEventListener("pointerup", () => {
 wrap.addEventListener("dblclick", () => openPanel($("#panel").classList.contains("hidden")));
 wrap.addEventListener("contextmenu", async (e) => {
   e.preventDefault();
-  if (!window.mochi) return openPanel(true);
+  if (!window.cadbury) return openPanel(true);
   const proj = await fetch("/api/tool/list_projects", { method: "POST" }).then((r) => r.json()).catch(() => ({ projects: [] }));
-  window.mochi.menu({ projects: proj.projects, current: proj.current, voice: voice.state });
+  window.cadbury.menu({ projects: proj.projects, current: proj.current, voice: voice.state });
 });
-window.mochi?.onMenu(async (action, arg) => {
+window.cadbury?.onMenu(async (action, arg) => {
   const tool = (n, a = {}) => fetch(`/api/tool/${n}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(a) }).then((r) => r.json());
   if (action === "talk") talkToggle();
   if (action === "hangup") voice.stop();
@@ -160,7 +160,7 @@ window.mochi?.onMenu(async (action, arg) => {
   if (action === "diff") { await tool("show_diff"); openPanel(true); }
   if (action === "project") { const r = await tool("switch_project", { name: arg }); bubble(r.ok ? `now in ${r.project} 📁` : r.reason, 4000); }
 });
-window.mochi?.onHotkey(() => talkToggle());
+window.cadbury?.onHotkey(() => talkToggle());
 
 $("#close-panel").onclick = () => openPanel(false);
 $("#typebox").onsubmit = async (e) => {
@@ -239,7 +239,7 @@ function scheduleAntic() {
   }, 6000 + Math.random() * 12000);
 }
 scheduleAntic();
-window.mochiAntic = doAntic; // try it from devtools: mochiAntic("zoom")
+window.cadburyAntic = doAntic; // try it from devtools: cadburyAntic("zoom")
 
 // petting: hover over the cat for a moment → purr
 let petTimer;
@@ -261,8 +261,8 @@ function eyeCenter() {
   const r = document.querySelector("#cat").getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height * 0.32 };
 }
-if (window.mochi?.onCursor) {
-  window.mochi.onCursor(({ x, y, winX, winY, zoom = 1 }) => {
+if (window.cadbury?.onCursor) {
+  window.cadbury.onCursor(({ x, y, winX, winY, zoom = 1 }) => {
     const c = eyeCenter();
     lookAt(x - (winX + c.x * zoom), y - (winY + c.y * zoom));
   });

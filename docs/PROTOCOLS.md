@@ -1,17 +1,17 @@
 # Protocols & interfaces
 
-## Bridge HTTP API (`127.0.0.1:${MOCHI_PORT:-8787}`)
+## Bridge HTTP API (`127.0.0.1:${CADBURY_PORT:-8787}`)
 | Route | Method | Purpose |
 |---|---|---|
 | `/` , `/remote` | GET | the pet page (`/remote` = phone layout) |
-| `/voice-config.js` | GET | `window.MOCHI_VOICE = {provider, halfDuplex, bargeThreshold}` |
-| `/api/health` | GET | liveness (`bin/mochi` polls this) |
+| `/voice-config.js` | GET | `window.CADBURY_VOICE = {provider, halfDuplex, bargeThreshold}` |
+| `/api/health` | GET | liveness (`bin/cadbury` polls this) |
 | `/api/state` | GET | mood, status, directory, harness, session, busy, recent activity |
-| `/api/context` | POST | `{directory, harness: "claude"\|"opencode", tmux?: paneId, tmuxSocket?: path}`: called by `bin/mochi` on every launch |
-| `/api/claude-hook?event=<HookEvent>` | POST | raw Claude Code hook JSON (from `bin/mochi-hook`) |
+| `/api/context` | POST | `{directory, harness: "claude"\|"opencode", tmux?: paneId, tmuxSocket?: path}`: called by `bin/cadbury` on every launch |
+| `/api/claude-hook?event=<HookEvent>` | POST | raw Claude Code hook JSON (from `bin/cadbury-hook`) |
 | `/api/tool/:name` | POST | run a voice tool with a JSON args body (OpenAI path and UI buttons) |
 | `/api/realtime-token` | POST | OpenAI ephemeral client secret `{value, model}` |
-| `/api/hotkey` | POST | toggle the mic (`bin/mochi-talk`) |
+| `/api/hotkey` | POST | toggle the mic (`bin/cadbury-talk`) |
 | `/api/events` | GET (SSE) | UI event stream (below) |
 | `/api/gemini-live` | WS | Gemini Live proxy (below) |
 
@@ -29,7 +29,7 @@ If a request carries a `Tailscale-User-Login` header (i.e. it came through `tail
 `listening` and `talking` are also set locally by the voice client (overlay moods).
 
 ## Claude Code hooks → cat
-`bin/mochi` passes `--settings ~/.cache/mochi/claude-hooks.json`, which wires each event to `bin/mochi-hook <Event>` (timeout 5 s, always exit 0).
+`bin/cadbury` passes `--settings ~/.cache/cadbury/claude-hooks.json`, which wires each event to `bin/cadbury-hook <Event>` (timeout 5 s, always exit 0).
 
 | Hook | Fields used | Effect |
 |---|---|---|
@@ -78,14 +78,14 @@ Payloads carry `session_id`, `transcript_path`, `cwd` and `hook_event_name` (ver
 Messages to the voice model start with `[system]` and say what to do, for example "Ask the user whether to allow it once, always, or reject. Then call answer_permission." `narrate()` appends `(Reply in <language>, even though this message is in English.)`. Throttled progress narrations say "only mention if natural". Urgent ones (permission, question, finished, error) are spoken at the next quiet moment.
 
 ## Gemini Live proxy (gemini.ts)
-- **Page → bridge:** Gemini client messages as-is (`realtimeInput.audio`, `realtimeInput.text`), plus `{"mochi":"ping"}` every 15 s.
+- **Page → bridge:** Gemini client messages as-is (`realtimeInput.audio`, `realtimeInput.text`), plus `{"cadbury":"ping"}` every 15 s.
 - **Bridge → page:**
   - Gemini server messages as-is (`serverContent`, `toolCall`), plus control messages:
-    - `{mochi:"ready", model, resumed}`
-    - `{mochi:"reconnecting", attempt}`
-    - `{mochi:"rate-limited", wait}`
-    - `{mochi:"error", message}`
-    - `{mochi:"pong"}`
+    - `{cadbury:"ready", model, resumed}`
+    - `{cadbury:"reconnecting", attempt}`
+    - `{cadbury:"rate-limited", wait}`
+    - `{cadbury:"error", message}`
+    - `{cadbury:"pong"}`
   - `setupComplete`, `sessionResumptionUpdate`, `goAway` and `toolCall` execution are handled in the bridge. `toolCall` is also forwarded so the UI can show it.
 - **Upstream:** `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent` with header `x-goog-api-key`. The setup includes:
   - `responseModalities:["AUDIO"]`, `speechConfig.voiceConfig`, `systemInstruction`;
