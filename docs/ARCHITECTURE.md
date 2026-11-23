@@ -50,11 +50,22 @@
 5. `PermissionRequest` / `Notification(permission_prompt)` sets mood `asking` and an **urgent** narration: "[system] Claude Code needs permission… ask the user". The cat asks you; your answer becomes `answer_permission`, which sends `1` (once), `2` (always) or Esc (+ your correction).
 6. `Stop`: the bridge reads `last_assistant_message` (falling back to the transcript JSONL) plus `git diff` → mood `happy`, a diff event to the panel, and an urgent narration "[system] Claude Code finished… final message…".
 7. The page injects narrations into the voice session as `realtimeInput.text`, only at a quiet moment (not while the cat is talking or you are). The cat speaks a short summary in your language.
+8. Along the way, memory records the conversation:
+   - Each finished line, yours and the cat's, goes to `/api/memory/turn`.
+   - The `code_task` instruction and Claude's final message go into the diary too.
+   - Every 10 of your turns, or after 5 quiet minutes, the background review (if configured) looks for facts worth keeping.
 
 opencode mode is the same, except steps 2–6 use opencode's HTTP API (`prompt_async`, `/permission/:id/reply`, `/question/:id/reply`, `/session/:id/abort`, `/session/:id/diff`) and its `/global/event` SSE stream instead of hooks and tmux.
 
 ## State the bridge keeps (state.ts)
 `harness`, `directory`, `sessionID`, `busy`, `mood` / `status`, `currentTool`, `todos`, `activity[]` (last 30), `lastText`, `pendingPermission`, `pendingQuestion`, `language`, `tmuxTarget` / `tmuxSocket`, `transcriptPath`, `hadError`. It all lives in memory; only `scale` and `language` persist (`~/.config/cadbury/prefs.json`).
+
+## Long-term memory (bridge/memory/)
+Separately from `state`, the bridge keeps a long-term memory in `~/.config/cadbury/memory/`:
+- three small plain-text notebooks (about the user, about each project, the cat's own notes);
+- a SQLite conversation diary.
+
+The notebooks go into `instructions()` once per voice session. The voice model edits them with the `memory` tool and searches the diary with `session_search`. An optional small local model reviews conversations in the background and may only add. Full explanation: [MEMORY.md](MEMORY.md) (for users) and [MEMORY-DESIGN.md](MEMORY-DESIGN.md) (how it's built).
 
 ## Voice providers
 - **Gemini Live (default):** the page talks WS to the bridge, which talks WS to Gemini. The bridge sends `setup` (model, voice, persona, tools, VAD config, transcription, context compression, session resumption), runs tool calls itself, and handles `goAway`, inactivity, resumption, "already connected" and rate limits (see GOTCHAS).

@@ -14,6 +14,9 @@
 | `/api/hotkey` | POST | toggle the mic (`bin/cadbury-talk`) |
 | `/api/events` | GET (SSE) | UI event stream (below) |
 | `/api/gemini-live` | WS | Gemini Live proxy (below) |
+| `/api/memory/turn` | POST | `{role: "user"\|"cat", text}`: the page reports each finished spoken line to the conversation diary ([MEMORY-DESIGN.md](MEMORY-DESIGN.md)) |
+| `/api/memory` | GET | everything memory holds right now: the three notebooks with usage, pending suggestions, recent sessions, review model |
+| `/api/memory/pending` | POST | `{id, approve: true\|false}`: accept or reject a change suggested by the background review |
 
 If a request carries a `Tailscale-User-Login` header (i.e. it came through `tailscale serve`) and `ALLOWED_TS_USER` is set, that login must match.
 
@@ -73,6 +76,15 @@ Payloads carry `session_id`, `transcript_path`, `cwd` and `hook_event_name` (ver
 `code_task(instruction)`, `task_status()`, `stop_task()`, `answer_permission(reply, message?)`, `answer_question(answers)`, `show_diff()`, `set_language(language)`, `list_projects()`, `switch_project(name)`, `new_session()`, `list_sessions()`, `resume_session(id)`.
 
 `runTool(name, args)` uses `claudeTools[name]` in Claude mode when it exists, otherwise the opencode / generic `tools[name]`. Results must be JSON objects (the Gemini proxy wraps arrays and primitives in `{result}`).
+
+### Memory tools (same for both harnesses, `bridge/memory/schemas.ts`)
+| Tool | Arguments | What it does |
+|---|---|---|
+| `memory` | `target: "user"\|"project"\|"memory"`, `operations: [{action: "add"\|"patch"\|"remove"\|"clear", content?, old_text?}]` | Changes a notebook. The batch is all-or-nothing, and the size limit is checked on the final result. `old_text` is a short quote; matching is forgiving, and a miss returns the closest entries. After 3 failed calls in a row the tool says to stop retrying. |
+| `session_search` | `mode: "search"\|"recent"\|"session"`, `query?`, `session_id?`, `limit?` | Searches the conversation diary. The result comes as text inside `<memory-context>…</memory-context>`, marked as past data, not instructions. |
+| `memory_pending` | `action: "list"\|"approve"\|"reject"`, `id?` | Changes the background review suggested, waiting for the user's OK. |
+
+The background review calls `memory` too, but only to add. Its patch and remove operations are staged in `pending.json`. Every `code_task` instruction and the coding agent's final message are also logged to the diary, as `task` and `agent` lines.
 
 ## Narration convention
 Messages to the voice model start with `[system]` and say what to do, for example "Ask the user whether to allow it once, always, or reject. Then call answer_permission." `narrate()` appends `(Reply in <language>, even though this message is in English.)`. Throttled progress narrations say "only mention if natural". Urgent ones (permission, question, finished, error) are spoken at the next quiet moment.

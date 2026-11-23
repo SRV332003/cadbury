@@ -4,6 +4,7 @@ import { spawnSync } from "bun";
 import { readFileSync, statSync } from "node:fs";
 import { basename } from "node:path";
 import { state, setMood, setContext, narrate, pushActivity, emit, type DiffFile } from "./state";
+import { recordTurn } from "./memory";
 
 // ---------- tmux ----------
 function tmux(...args: string[]) {
@@ -161,6 +162,7 @@ export function handleHook(event: string, p: any) {
       state.pendingQuestion = undefined;
       const text = String(p.last_assistant_message ?? "") || lastAssistantText(state.transcriptPath);
       state.lastText = text;
+      if (text) recordTurn("agent", text, state.directory);
       const files = gitDiff(p.cwd ?? state.directory);
       if (files.length) emit({ type: "diff", files });
       const fileLine = files.length

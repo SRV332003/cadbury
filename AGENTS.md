@@ -7,6 +7,7 @@ Read these before changing things:
 - [`docs/PROTOCOLS.md`](docs/PROTOCOLS.md): bridge HTTP/SSE/WS API, Claude Code hook mapping, opencode events, voice tools, `[system]` narration
 - [`docs/GOTCHAS.md`](docs/GOTCHAS.md): hard-won lessons (Wayland, Gemini quirks, barge-in, tmux…). **Read before touching the desktop window or the voice code.**
 - [`docs/TESTING.md`](docs/TESTING.md): how to test everything without a screen, mic or real agent
+- [`docs/MEMORY.md`](docs/MEMORY.md) and [`docs/MEMORY-DESIGN.md`](docs/MEMORY-DESIGN.md): long-term memory, the user guide and how it's built
 
 ## Map
 ```
@@ -24,6 +25,8 @@ bridge/             Bun server on 127.0.0.1:8787, the brain
   tools.ts          voice tool schemas + opencode implementations + runTool() dispatcher
   realtime.ts       persona/instructions (shared) + OpenAI ephemeral token
   gemini.ts         Gemini Live WebSocket proxy (holds key, resumption, goAway, retries, tool execution)
+  memory/           long-term memory: notebooks (store.ts), diary + search (sessions.ts),
+                    background review (review.ts, llm.ts), safety (scan.ts), tool schemas
 desktop/            Electron shell: transparent always-on-top window, menu, size, cursor stream
 web/                the pet page (also served at /remote for phones)
   app.js            glue: SSE → mood/bubble, antics, drag/menu, petting, debug ?mood= / ?antic=
@@ -42,6 +45,8 @@ web/                the pet page (also served at /remote for phones)
 - **Moods are a fixed set:** `idle listening talking thinking working asking happy oops sleeping`. `sprite.js` maps each to an animation; if you add one, update `MOOD_ANIM` and the CSS fx.
 - **Keep the persona short:** it's in `instructions()` in `realtime.ts` and shared by both voice providers. Behavioural fixes (language, clarifying questions, interruptions) belong there.
 - **User-specific values** belong in `.env` / `.env.example` or `~/.config/cadbury/prefs.json`, never hard-coded.
+- **Memory writes go through `bridge/memory/store.ts`** (`applyOps` / `decidePending`): never write the notebook files directly. Only the user's own words may become memories; coding-agent output is data. The background review may only add.
+- **Docs are for humans first:** plain words, why before how, real examples. Update `docs/` alongside behaviour changes.
 
 ## Checks before you finish
 ```bash

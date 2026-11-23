@@ -101,8 +101,13 @@ voice.addEventListener("state", (e) => {
 voice.addEventListener("listening", (e) => { overlay = e.detail ? "listening" : null; renderMood(); });
 voice.addEventListener("talking", (e) => { overlay = e.detail ? "talking" : null; renderMood(); });
 voice.addEventListener("level", (e) => window.catSprite?.setLevel(e.detail));
-voice.addEventListener("cat-text", (e) => { bubble(e.detail.text, e.detail.done ? 10000 : 0); if (e.detail.done) feed("cat", "🐱 " + e.detail.text); });
-voice.addEventListener("user-text", (e) => feed("you", "🧑 " + e.detail));
+// long-term memory: every finished line goes to the bridge's conversation log (see docs/MEMORY.md)
+function remember(role, text) {
+  if (!text?.trim()) return;
+  fetch("/api/memory/turn", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ role, text }) }).catch(() => {});
+}
+voice.addEventListener("cat-text", (e) => { bubble(e.detail.text, e.detail.done ? 10000 : 0); if (e.detail.done) { feed("cat", "🐱 " + e.detail.text); remember("cat", e.detail.text); } });
+voice.addEventListener("user-text", (e) => { feed("you", "🧑 " + e.detail); remember("user", e.detail); });
 voice.addEventListener("tool", (e) => feed("act", `⚙ ${e.detail.name} ${e.detail.args?.instruction ? "— " + e.detail.args.instruction : ""}`));
 voice.addEventListener("error", (e) => { bubble("😿 " + e.detail, 8000); feed("act", "error: " + e.detail); });
 let dropCount = 0, dropReset;
@@ -169,7 +174,7 @@ $("#typebox").onsubmit = async (e) => {
   if (!t) return;
   $("#typein").value = "";
   feed("you", "🧑 " + t);
-  if (voice.state !== "off") voice.sayText(t);
+  if (voice.state !== "off") { voice.sayText(t); remember("user", t); }
   else {
     await fetch("/api/tool/code_task", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ instruction: t }) });
     bubble("on it! 🐾", 3000);

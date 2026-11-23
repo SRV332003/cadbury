@@ -1,5 +1,6 @@
 // Tracks what opencode is doing and turns it into cat moods + narration.
 import { oc } from "./opencode";
+import { recordTurn } from "./memory";
 
 export type Mood =
   | "sleeping" | "idle" | "listening" | "talking" | "thinking"
@@ -160,6 +161,7 @@ async function finishTask(sessionID: string, directory: string) {
   const fileLine = files.length
     ? files.slice(0, 12).map((f) => `${f.file} (${f.status ?? "modified"}, +${f.additions} -${f.deletions})`).join("; ")
     : "no files changed";
+  if (finalText) recordTurn("agent", finalText, directory);
   setMood("happy", "done!", 7000);
   narrate(
     `[system] opencode finished the task. Tell the user out loud, briefly and in plain words, what was done. ` +

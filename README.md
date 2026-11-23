@@ -14,6 +14,7 @@
 
 - 🎙 **Hands-free voice.** You can interrupt it mid-sentence. It answers in your language and keeps it (say "talk to me in Hindi" and it sticks).
 - 🛠 **Real harness power.** Everything goes through your actual Claude Code or opencode session: same tools, MCP servers, permissions and `CLAUDE.md`/`AGENTS.md`. Typing in the terminal works as usual, and the cat narrates that too.
+- 🧠 **Remembers you.** Your name, how you like answers, what each project is about, and what you did together last week. It's kept in small, readable notes on your own computer. See [Memory](#memory).
 - 🐾 **A pet with moods.** Idle, listening, talking, thinking, working, asking, happy, oops, sleeping, plus random antics (zoomies, flops, begging…). Its head follows your mouse, and hovering over it counts as petting.
 - 🔐 **Uses your Claude subscription legitimately.** Cadbury drives the official `claude` CLI; it never touches your credentials.
 - 💸 **Free voice option.** Gemini Live has a free tier. OpenAI Realtime is also supported.
@@ -77,6 +78,17 @@ tailscale serve --bg 8787
 ```
 Open `https://<your-machine>.<your-tailnet>.ts.net/remote` on your phone and tap **Talk**. You can add it to your home screen. Set `ALLOWED_TS_USER` to restrict access to your own tailnet login.
 
+## Memory
+
+Cadbury remembers you between conversations. Tell it *"mera naam Aman hai, aur answers chhote rakhna"* today, and tomorrow it already knows.
+
+- It keeps three small notebooks: **about you**, **about each project**, and **its own notes**. They're plain text in `~/.config/cadbury/memory/`, so you can read and edit them.
+- It keeps a **diary** of past conversations, so you can ask *"what did we do yesterday?"*.
+- Say *"forget that"* or *"forget everything"* to remove things.
+- **Optional:** with a small local model (e.g. `qwen3:4b` through Ollama), Cadbury also looks back at conversations and notices things worth keeping on its own. It can only add; changes to existing notes wait for your OK.
+
+Everything stays on your machine, except that the notebooks are shared with your voice provider during a conversation. Full guide, including setup and privacy: **[docs/MEMORY.md](docs/MEMORY.md)**.
+
 ## Configuration
 
 All settings live in `.env`; see [`.env.example`](.env.example) for the full list with comments. The most useful ones:
@@ -91,6 +103,7 @@ All settings live in `.env`; see [`.env.example`](.env.example) for the full lis
 | `CADBURY_BARGE_THRESHOLD` | `0.06` | lower = easier to interrupt the cat |
 | `CADBURY_SILENCE_MS` | `800` | pause length before the cat answers |
 | `CADBURY_HALF_DUPLEX` | off | set `1` if the cat hears its own voice |
+| `CADBURY_MEMORY_LLM_URL` / `CADBURY_MEMORY_MODEL` | off | optional local model that notices things worth remembering ([guide](docs/MEMORY.md#setup-the-helper-model-optional)) |
 
 Your choices for size and language are remembered in `~/.config/cadbury/prefs.json`.
 
@@ -110,6 +123,7 @@ Your choices for size and language are remembered in `~/.config/cadbury/prefs.js
 - **API keys** stay in `.env` on your machine. The page only gets short-lived tokens (OpenAI), or talks to a local proxy that holds the key (Gemini).
 - **Your voice** goes to the voice provider you chose. On Google's free tier, it may be used to improve their models.
 - **Code** is only touched by your coding agent, the same as without Cadbury.
+- **Memory** stays in `~/.config/cadbury/memory/` on your machine. The small notebooks are included in the voice model's instructions during a conversation. Details: [docs/MEMORY.md#privacy](docs/MEMORY.md#privacy).
 
 ## Contributing / hacking
 Read [`AGENTS.md`](AGENTS.md) and [`docs/`](docs/), written for humans and AI coding agents alike: architecture, protocols, gotchas, and how to test without a screen.

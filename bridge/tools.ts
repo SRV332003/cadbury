@@ -4,6 +4,7 @@ import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import { oc } from "./opencode";
 import { state, setContext, setMood, emit, savePref, type DiffFile } from "./state";
+import { memoryToolSchemas, memoryTools, recordTurn } from "./memory";
 
 // Folders whose subfolders count as "projects" for voice switching (opencode mode).
 const DEFAULT_ROOTS = ["projects", "Projects", "code", "Code", "src", "dev", "work", "repos", "git", "Developer"]
@@ -110,6 +111,7 @@ export const toolSchemas = [
     description: "Resume a session from list_sessions by id.",
     parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
   },
+  ...memoryToolSchemas,
 ];
 
 type ToolFn = (args: any) => Promise<unknown>;
@@ -222,6 +224,9 @@ export const tools: Record<string, ToolFn> = {
     showInTui(s.id);
     return { ok: true, title: s.title };
   },
+
+  // long-term memory: the same for both harnesses (bridge/memory/)
+  ...memoryTools(() => state.directory),
 };
 
 /** Run a voice tool against whichever harness the cat is following. */
@@ -229,5 +234,6 @@ export async function runTool(name: string, args: any): Promise<unknown> {
   const { claudeTools } = await import("./claude");
   const fn = (state.harness === "claude" ? claudeTools[name] : undefined) ?? tools[name];
   if (!fn) return { error: `unknown tool ${name}` };
+  if (name === "code_task" && args?.instruction) recordTurn("task", String(args.instruction), state.directory);
   return fn(args ?? {});
 }

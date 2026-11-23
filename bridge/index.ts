@@ -7,6 +7,8 @@ import { runTool } from "./tools";
 import { mintToken } from "./realtime";
 import { geminiSocket, newLiveClient, GEMINI_MODEL } from "./gemini";
 import { handleHook } from "./claude";
+import { recordTurn, overview as memoryOverview, decidePending } from "./memory";
+import { llmConfigured, LLM_MODEL } from "./memory/llm";
 
 const VOICE_PROVIDER = (process.env.VOICE_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
 
@@ -96,6 +98,19 @@ Bun.serve({
       return json({ ok: true });
     }
 
+    // ---- long-term memory (bridge/memory/, docs/MEMORY.md) ----
+    // the page reports each finished spoken line here (works for both voice providers)
+    if (path === "/api/memory/turn" && req.method === "POST") {
+      const { role, text } = await req.json().catch(() => ({}));
+      if ((role === "user" || role === "cat") && typeof text === "string") recordTurn(role, text, state.directory);
+      return json({ ok: true });
+    }
+    if (path === "/api/memory" && req.method === "GET") return json(memoryOverview(state.directory));
+    if (path === "/api/memory/pending" && req.method === "POST") {
+      const { id, approve } = await req.json().catch(() => ({}));
+      return json(decidePending(String(id ?? ""), !!approve));
+    }
+
     if (path === "/api/realtime-token" && req.method === "POST") {
       const t = await mintToken();
       return json(t, "error" in t ? 500 : 200);
@@ -144,5 +159,6 @@ Bun.serve({
 });
 
 console.log(`[cadbury] voice: ${VOICE_PROVIDER === "gemini" ? `Gemini Live (${GEMINI_MODEL})` : "OpenAI Realtime"}`);
+console.log(`[cadbury] memory review: ${llmConfigured() ? LLM_MODEL : "off (see docs/MEMORY.md to turn it on)"}`);
 console.log(`[cadbury] bridge on http://127.0.0.1:${PORT}  (opencode at ${OC_URL})`);
 console.log(`[cadbury] attach the TUI with:  opencode attach ${OC_URL} --dir <project>`);

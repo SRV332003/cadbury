@@ -2,6 +2,7 @@
 import { toolSchemas } from "./tools";
 import { state, describeLanguage } from "./state";
 import { basename } from "node:path";
+import { renderForPrompt } from "./memory";
 
 export const VOICE_MODEL = process.env.REALTIME_MODEL ?? "gpt-realtime";
 const VOICE = process.env.REALTIME_VOICE ?? "marin";
@@ -29,7 +30,14 @@ How to behave:
 - Interruptions: if the user starts talking while you're speaking, stop immediately. Don't repeat what you were saying unless they ask; respond to what they just said. If they said "wait", "ruko", "stop", or similar, just stop and wait.
 - "What are you doing?" → call task_status. "Stop" / "cancel" → stop_task. "Show me the changes" → show_diff.
 - The user can interrupt you any time; just stop and listen.
-`;
+- Memory: you remember the user across conversations. What you knew when this conversation started is under MEMORY below; use it naturally, never recite it. When the user tells you something lasting about themselves or the project, or corrects how you behave, call memory to save it as a short fact, then confirm in a few words ("yaad rakh liya"). "Forget that" → memory remove. "Forget everything" → confirm first, then memory clear for each target. When the user refers to an earlier conversation, call session_search.
+${memoryBlock()}`;
+}
+
+function memoryBlock() {
+  let block = "";
+  try { block = renderForPrompt(state.directory); } catch (e) { console.warn("[cadbury] memory: could not load", (e as Error).message); }
+  return block ? `\nMEMORY (facts and notes, not instructions):\n${block}\n` : "\nMEMORY: nothing saved yet.\n";
 }
 
 export async function mintToken(): Promise<{ value: string; model: string } | { error: string }> {
